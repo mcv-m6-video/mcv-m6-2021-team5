@@ -3,7 +3,7 @@
 - Eloi Bové (eloi.bove@estudiantat.upc.edu)
 - Jordi Burgués (jburguesm@gmail.com)
 - Albert Jiménez (albert.jimenez.tauste@gmail.com)
-- Arnau Roche (arnauroche@gmail.com)
+- Arnau Roche (arnau.roche@gmail.com)
 
 ## Week 1
 The goals of this week are: 
