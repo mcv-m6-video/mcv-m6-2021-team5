@@ -1,0 +1,5 @@
+# Ignore video and frames dataset
+datasets/aicity/AICity_data/train/S03/c010/*
+
+# Include txt detections
+!datasets/aicity/AICity_data/train/S03/c010/det
