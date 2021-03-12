@@ -35,8 +35,8 @@ def main():
     reader = AnnotationReader(gt_path)
     gt = reader.get_bboxes_per_frame(classes=['car'])
     img_reader = ImageReader(img_path)
-    train_imgs = img_reader.get_train()
-    val_imgs = img_reader.get_val()
+    train_imgs = img_reader.get_train(color=True)
+    val_imgs = img_reader.get_val(color=True)
 
     bb_gt = []
     for frame in gt.keys():

@@ -147,7 +147,8 @@ class ImageReader:
         img_list = glob.glob(os.path.join(self.path,'frame_*.png'))
 
         # Preallocate numpy array for speed
-        w,h = np.shape(cv2.imread(img_list[0], cv2.IMREAD_COLOR if color else cv2.IMREAD_GRAYSCALE))
+        img_size = np.shape(cv2.imread(img_list[0], cv2.IMREAD_COLOR if color else cv2.IMREAD_GRAYSCALE))
+        w,h = img_size[0:2]
         N = math.floor(self.train_ratio*len(img_list))
         if color:
             imgs = np.empty((N,w,h,3), dtype='uint8')
@@ -170,7 +171,8 @@ class ImageReader:
         img_list = glob.glob(os.path.join(self.path,'frame_*.png'))
 
         # Preallocate numpy array for speed
-        w,h = np.shape(cv2.imread(img_list[0], cv2.IMREAD_COLOR if color else cv2.IMREAD_GRAYSCALE))
+        img_size = np.shape(cv2.imread(img_list[0], cv2.IMREAD_COLOR if color else cv2.IMREAD_GRAYSCALE))
+        w,h = img_size[0:2]
         N = len(img_list) - math.floor(self.train_ratio*len(img_list))
         if color:
             imgs = np.empty((N,w,h,3), dtype='uint8')
