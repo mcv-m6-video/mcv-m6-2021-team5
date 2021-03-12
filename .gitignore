@@ -5,3 +5,4 @@ datasets/aicity/AICity_data/train/S03/c010/*
 !datasets/aicity/AICity_data/train/S03/c010/det
 
 utils/__pycache__/*
+*.pyc
