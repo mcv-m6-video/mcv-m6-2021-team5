@@ -4,6 +4,9 @@ from copy import deepcopy
 
 import numpy as np
 import xmltodict
+import glob
+import math
+import cv2
 
 from utils.bb import BB
 #from src.tracking.track import Track
@@ -122,6 +125,64 @@ class AnnotationReader:
 
         return bboxes
 
+class ImageReader:
+
+    """
+    Creates ImageReader object that reads the images
+    Params:
+        path: path to frames directory
+        train_ratio: percentage of frames to use as train set
+    """
+    def __init__(self, path, train_ratio=0.25):
+        self.path = path
+        self.train_ratio = train_ratio
+
+    def get_train(self, color=False):
+        """
+        This function returns a numpy array of train images
+        This assumes that all images have the same size 
+        for speed purposes
+        """
+        # Get image list
+        img_list = glob.glob(os.path.join(self.path,'frame_*.png'))
+
+        # Preallocate numpy array for speed
+        w,h = np.shape(cv2.imread(img_list[0], cv2.IMREAD_COLOR if color else cv2.IMREAD_GRAYSCALE))
+        N = math.floor(self.train_ratio*len(img_list))
+        if color:
+            imgs = np.empty((N,w,h,3), dtype='uint8')
+        else:
+            imgs = np.empty((N,w,h), dtype='uint8')
+
+        # Read images
+        for i, filename in enumerate(img_list[0:N]):
+            imgs[i,:,:] = cv2.imread(filename, cv2.IMREAD_COLOR if color else cv2.IMREAD_GRAYSCALE)
+
+        return imgs   
+    
+    def get_val(self, color=False):
+        """
+        This function returns a numpy array of validation images
+        This assumes that all images have the same size 
+        for speed purposes
+        """
+        # Get image list
+        img_list = glob.glob(os.path.join(self.path,'frame_*.png'))
+
+        # Preallocate numpy array for speed
+        w,h = np.shape(cv2.imread(img_list[0], cv2.IMREAD_COLOR if color else cv2.IMREAD_GRAYSCALE))
+        N = len(img_list) - math.floor(self.train_ratio*len(img_list))
+        if color:
+            imgs = np.empty((N,w,h,3), dtype='uint8')
+        else:
+            imgs = np.empty((N,w,h), dtype='uint8')
+
+        # Read images
+        train_N = math.floor(self.train_ratio*len(img_list))
+        for i, filename in enumerate(img_list[train_N:-1]):
+            imgs[i,:,:] = cv2.imread(filename, cv2.IMREAD_COLOR if color else cv2.IMREAD_GRAYSCALE)
+
+        return imgs
 
 if __name__ == '__main__':
     reader = AnnotationReader(path='../../data/ai_challenge_s03_c010-full_annotation.xml')
