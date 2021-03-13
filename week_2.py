@@ -34,40 +34,30 @@ def main():
 
     ## TASKS 1-2
     print('\n\n------------------- Initialization -------------------')
-    gestimator = GaussianBGEstimator(img_path, mask_path)
-    gmodel = gestimator.train(color=False)
-
-    # Mean of Gaussian model
-    #print(np.shape(gmodel[0]))
-    # Standard deviation of Gaussian model
-    #print(np.shape(gmodel[1]))
-
-    """
-    cv2.imshow("std dev model", gmodel[1])
-    cv2.waitKey(0) 
-    cv2.destroyAllWindows()
-    """
-
-    #print(gestimator.mean_px)
-    #print(gestimator.std_px)
-
-    gestimator.test(gestimator)
-
-    """
+    
+    # Read GT
     reader = AnnotationReader(gt_path)
     gt = reader.get_bboxes_per_frame(classes=['car'])
-    img_reader = ImageReader(img_path)
-    train_imgs = img_reader.get_train(color=False)
-    val_imgs = img_reader.get_val(color=False)
 
     bb_gt = []
     for frame in gt.keys():
         bb_gt.append(gt[frame])
 
-    print('Done!')
-    print('\n\n------------------- Task 1 -------------------')
-    task1_1(train_imgs, val_imgs, bb_gt)
-    """
+    # Create model and infer the results
+    gestimator = GaussianBGEstimator(img_path, mask_path)
+    gestimator.load_pretrained('models/gaussian.pkl')
+    #bb_ge = gestimator.test()
+    bb_gea = gestimator.test_adaptive()
+
+    # Evaluate
+    #map, _, _ = mean_average_precision(bb_gt, bb_ge)
+    #print('Gaussian estimator mAP: ' + str(map))
+
+    map, _, _ = mean_average_precision(bb_gt, bb_gea)
+    print('Gaussian Adaptive estimator mAP: ' + str(map))
+
+    
+
 
 
 main()
