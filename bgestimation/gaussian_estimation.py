@@ -93,8 +93,6 @@ class GaussianBGEstimator:
         # For all the images to test
         print('[1/1] Computing foreground masks for testing frames (' + str(np.shape(img_list[N_train:-1])[0]) + '/' + str(np.shape(img_list)[0]) + '):')
         for filename in tqdm(img_list[N_train:-1]):
-            print(filename)
-            print(np.shape(img_list[N_train:-1]))
             # Read image
             img = cv2.imread(filename, cv2.IMREAD_COLOR if color else cv2.IMREAD_GRAYSCALE)
             num_frame = os.path.split(filename)[1]
