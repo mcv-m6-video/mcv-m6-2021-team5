@@ -34,14 +34,13 @@ def main():
 
     ## TASKS 1-2
     print('\n\n------------------- Initialization -------------------')
-    print('Reading the data...')
-    gestimator = GaussianBGEstimator(img_path)
+    gestimator = GaussianBGEstimator(img_path, mask_path)
     gmodel = gestimator.train(color=False)
 
     # Mean of Gaussian model
-    print(np.shape(gmodel[0]))
+    #print(np.shape(gmodel[0]))
     # Standard deviation of Gaussian model
-    print(np.shape(gmodel[1]))
+    #print(np.shape(gmodel[1]))
 
     """
     cv2.imshow("std dev model", gmodel[1])
