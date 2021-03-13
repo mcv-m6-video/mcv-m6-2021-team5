@@ -46,7 +46,7 @@ class GaussianBGEstimator:
         for i, filename in enumerate(img_list[0:N]):
             img = cv2.imread(filename, cv2.IMREAD_COLOR if color else cv2.IMREAD_GRAYSCALE)
             self.std_px += (img - self.mean_px) * (img - self.mean_px)
-        self.std_px /= N-1
+        self.std_px = np.sqrt(self.std_px/(N-1))
         return self.mean_px, self.std_px   
     
     def test(self, indices=None, color=False, alpha=3):
@@ -69,7 +69,29 @@ class GaussianBGEstimator:
             train_N = math.floor(self.train_ratio*len(img_list))
 
         for i, filename in enumerate(img_list[train_N:-1]):
+            print(i)
+            print(filename)
+            num_frame = os.path.split(filename)[1]
+            print(os.path.split(filename)[1])
             img = cv2.imread(filename, cv2.IMREAD_COLOR if color else cv2.IMREAD_GRAYSCALE)
-            foreground = (img-self.mean_px > alpha*self.std_px)
-            print(foreground)
+            foreground = (img-self.mean_px > alpha*(self.std_px + 2))
+            print(type(foreground))
+
+            mask = foreground.astype(np.uint8)  #convert to an unsigned byte
+            mask*=255
+            """
+            cv2.imshow('mask', mask)
+            cv2.waitKey(0) 
+            cv2.destroyAllWindows()
+            """
+            print(np.shape(mask))
+            print(type(mask))
+            
+            #cv2.imwrite('mask.png', mask)
+            """
+            cv2.imshow("frame", foreground*255)
+            cv2.waitKey(0) 
+            cv2.destroyAllWindows()
+            """
+            cv2.imwrite('datasets/aicity/AICity_data/train/S03/c010/masks/mask_' + str(num_frame) + '.png', mask)
             break
