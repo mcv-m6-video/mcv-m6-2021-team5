@@ -66,7 +66,7 @@ class GaussianBGEstimator:
             self.std_px = np.zeros((w,h))
 
         # Two pass method: first compute mean then std
-        print('[1/2] Computing mean for training frames (' + str(np.shape(self.img_list[0:self.N_train])[0]) + '/' + str(np.shape(self.img_list)[0]) + '):')
+        print('[1/2] Computing mean for training frames [' + str(self.N_test_start) + '-' + str(self.N_test_end) + ']:')
         for filename in tqdm(self.img_list[0:self.N_train]):
             img = cv2.imread(filename, cv2.IMREAD_COLOR if color else cv2.IMREAD_GRAYSCALE)
             self.mean_px += img
@@ -81,7 +81,7 @@ class GaussianBGEstimator:
 
         return self.mean_px, self.std_px   
     
-    def test(self, color=False, alpha=1, vis=False, N_test_start=None, N_test_end=None):
+    def test(self, color=False, alpha=1.75, vis=False, N_test_start=None, N_test_end=None):
         """
         Test the computed model
         Params:
@@ -102,7 +102,7 @@ class GaussianBGEstimator:
 
         # For all the images to test
         detections = []
-        print('[1/1] Computing foreground masks for testing frames (' + str(np.shape(self.img_list[self.N_train:-1])[0]) + '/' + str(np.shape(self.img_list)[0]) + '):')
+        print('[1/1] Computing foreground masks for testing frames [' + str(self.N_test_start) + '-' + str(self.N_test_end) + ']:')
         for filename in tqdm(self.img_list[self.N_test_start:self.N_test_end]):
 
             # Read image
@@ -123,7 +123,7 @@ class GaussianBGEstimator:
             if vis:
                 cv2.imwrite(self.mask_path + 'mask_' + str(frame_name) + '_raw.png', foreground_mask)
                 #cv2.imwrite(self.mask_path + 'mask_' + str(frame_name) + '_denoised_1.png', foreground_mask_denoised_1)
-                cv2.imwrite(self.mask_path + 'mask_' + str(frame_name) + '_denoised_2.png', foreground_mask_denoised_2)
+                cv2.imwrite(self.mask_path + 'mask_' + str(frame_name) + '_denoised.png', foreground_mask_denoised_2)
                 
             # Get the number of connected components
             #output_0 = cv2.connectedComponentsWithStats(foreground_mask)
@@ -142,60 +142,84 @@ class GaussianBGEstimator:
                 frame_dets.append( BB(int(frame_num), i, 'car', x, y, x+w, y+h, 1) )
             detections.append(frame_dets)
         
-            if vis:
-                plot_detections(frame_dets)
+            # if vis:
+            #     plot_detections(frame_dets)
         return detections
 
-    def test_adaptive(self, color=False, alpha=1, rho=0.1, vis=False, N_test_start=None, N_test_end=None):
+    def test_adaptive(self, color=False, alpha=1.75, rho=0.4, vis=False, N_test_start=None, N_test_end=None):
         """
         Test the computed model using the adaptive method
         Params:
             color: True: color images, False: grayscale
+            N_test_start: if None, all images are tested
+            N_test_end: if None, all images are tested
         Returns:
             List of lists of BBs [[BB,BB...],...]
         """
         print('Testing estimator:')
 
+        # Costomize frames to test (if None, all images are tested)
+        if N_test_start != None:
+            self.N_test_start = N_test_start
+        
+        if N_test_end != None:
+            self.N_test_end = N_test_end
+
         # For all the images to test
         detections = []
-        print('[1/1] Computing foreground masks for testing frames (' + str(np.shape(self.img_list[self.N_train:-1])[0]) + '/' + str(np.shape(self.img_list)[0]) + '):')
-        for filename in tqdm(self.img_list[self.N_train:-1]):
+        print('[1/1] Computing foreground masks for testing frames [' + str(self.N_test_start) + '-' + str(self.N_test_end) + ']:')
+        for filename in tqdm(self.img_list[self.N_test_start:self.N_test_end]):
+            
             # Read image
             img = cv2.imread(filename, cv2.IMREAD_COLOR if color else cv2.IMREAD_GRAYSCALE)
             frame_name = os.path.split(filename)[1].split(".")[0]
+            frame_num = frame_name.split("_")[1]
 
             # Create a mask with foreground pixels
             foreground_mask = (img-self.mean_px > alpha*(self.std_px + 2))
             foreground_mask = foreground_mask.astype(np.uint8)  # Convert to an unsigned byte
             foreground_mask*=255
 
-            foreground_mask_denoised_1 = denoise_mask(foreground_mask, method=1)
-            foreground_mask_denoised_2 = denoise_mask(foreground_mask, method=2)
+            foreground_mask_denoised = denoise_mask(foreground_mask, method=2)
 
-            cv2.imwrite(self.mask_path + 'mask_' + str(frame_name) + '_raw.png', foreground_mask)
-            cv2.imwrite(self.mask_path + 'mask_' + str(frame_name) + '_denoised_1.png', foreground_mask_denoised_1)
-            cv2.imwrite(self.mask_path + 'mask_' + str(frame_name) + '_denoised_2.png', foreground_mask_denoised_2)
-            
+            # Save masks
+            if vis:
+                cv2.imwrite(self.mask_path + 'mask_' + str(frame_name) + '_raw_ad.png', foreground_mask)
+                #cv2.imwrite(self.mask_path + 'mask_' + str(frame_name) + '_denoised_1.png', foreground_mask_denoised_1)
+                cv2.imwrite(self.mask_path + 'mask_' + str(frame_name) + '_denoised_ad.png', foreground_mask_denoised)
+             
         
-            # # Get the number of connected components
-            # output = cv2.connectedComponentsWithStats(foreground_mask)
-            # (numLabels, _, stats, _) = output
+            # Get the number of connected components
+            output = cv2.connectedComponentsWithStats(foreground_mask_denoised)
+            (numLabels, _, stats, _) = output
 
-            # frame_dets = []
-            # for i in range(1,numLabels):
-            #     x = stats[i, cv2.CC_STAT_LEFT]
-            #     y = stats[i, cv2.CC_STAT_TOP]
-            #     w = stats[i, cv2.CC_STAT_WIDTH]
-            #     h = stats[i, cv2.CC_STAT_HEIGHT]
-            #     frame_dets.append( BB(num_frame, i, 'car', x, y, x+w, y+h, 1) )
-            # detections.append(frame_dets)
-            # #cv2.imwrite('datasets/aicity/AICity_data/train/S03/c010/masks/mask_' + str(num_frame) + '.png', foreground_mask)
+            frame_dets = []
+            for i in range(1,numLabels):
+                x = stats[i, cv2.CC_STAT_LEFT]
+                y = stats[i, cv2.CC_STAT_TOP]
+                w = stats[i, cv2.CC_STAT_WIDTH]
+                h = stats[i, cv2.CC_STAT_HEIGHT]
+                frame_dets.append( BB(int(frame_num), i, 'car', x, y, x+w, y+h, 1) )
+            detections.append(frame_dets)
 
-            # # Update model
-            # # Does not work
-            # pixel_updates = img*(foreground_mask==0)
-            # self.mean_px = rho * pixel_updates + (1-rho) * self.mean_px
-            # var_px = rho * (pixel_updates-self.mean_px*(foreground_mask==0))**2 + (1-rho) * self.std_px**2
-            # self.std_px = np.sqrt(var_px)
+            # if vis:
+            #     plot_detections(frame_dets)
+
+            # Update model
+            image_pixels_bg = img*(foreground_mask_denoised==0)
+            mean_pixels_bg = self.mean_px*(foreground_mask_denoised==0)
+            var_pixels_bg = self.std_px*self.std_px*(foreground_mask_denoised==0)
+
+            # Compute updated mean only for background pixels
+            updated_mean = rho * image_pixels_bg + (1-rho) * mean_pixels_bg
+            #self.mean_px = self.mean_px*(foreground_mask_denoised==1) + updated_mean*(foreground_mask_denoised==0)
+            #self.mean_px[foreground_mask_denoised==0] = updated_mean
+            np.putmask(self.mean_px, foreground_mask_denoised==0, updated_mean)
+            
+            # Compute updated std only for background pixels
+            updated_dev = np.sqrt( rho * (image_pixels_bg-mean_pixels_bg)**2 + (1-rho) * var_pixels_bg)
+            #self.std_px = self.std_px*(foreground_mask_denoised==1) + updated_dev*(foreground_mask_denoised==0)
+            #self.std_px[foreground_mask_denoised==0] = updated_dev
+            np.putmask(self.std_px, foreground_mask_denoised==0, updated_dev)
 
         return detections

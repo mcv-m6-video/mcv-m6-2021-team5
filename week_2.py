@@ -39,7 +39,8 @@ def main():
     gestimator = GaussianBGEstimator(img_path, mask_path)
     gestimator.load_pretrained('models/gaussian.pkl')
 
-    bb_ge = gestimator.test(vis=False, N_test_start = 535, N_test_end = 635)
+    bb_ge = gestimator.test(vis=True, N_test_start = 535, N_test_end = 635)
+    bb_gea = gestimator.test_adaptive(vis=True, N_test_start = 535, N_test_end = 635)
 
     # Read GT
     reader = AnnotationReader(gt_path)
@@ -51,15 +52,12 @@ def main():
     for frame in range(gestimator.N_test_start, gestimator.N_test_end):
         bb_gt.append(gt[frame])
 
-
-    #bb_gea = gestimator.test_adaptive()
-
     # Evaluate
     map, _, _ = mean_average_precision(bb_gt, bb_ge)
     print('Gaussian estimator mAP: ' + str(map))
 
-    #map, _, _ = mean_average_precision(bb_gt, bb_gea)
-    #print('Gaussian Adaptive estimator mAP: ' + str(map))
+    map, _, _ = mean_average_precision(bb_gt, bb_gea)
+    print('Gaussian Adaptive estimator mAP: ' + str(map))
 
     
 
