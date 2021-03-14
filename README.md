@@ -27,6 +27,7 @@ In order to preview the different detections in the frames, vdo.avi should be do
 ### Dependencies
 `pip install xmltodict`
 `pip install tqdm`
+`pip install scipy`
   
 ## Execution  :gear:
 The program is executed as follows:
