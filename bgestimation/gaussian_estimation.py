@@ -146,7 +146,7 @@ class GaussianBGEstimator:
             #     plot_detections(frame_dets)
         return detections
 
-    def test_adaptive(self, color=False, alpha=1.75, rho=0.4, vis=False, N_test_start=None, N_test_end=None):
+    def test_adaptive(self, color=False, alpha=1.75, rho=0.01, vis=False, N_test_start=None, N_test_end=None):
         """
         Test the computed model using the adaptive method
         Params:
@@ -212,14 +212,14 @@ class GaussianBGEstimator:
 
             # Compute updated mean only for background pixels
             updated_mean = rho * image_pixels_bg + (1-rho) * mean_pixels_bg
-            #self.mean_px = self.mean_px*(foreground_mask_denoised==1) + updated_mean*(foreground_mask_denoised==0)
+            self.mean_px = self.mean_px*(foreground_mask_denoised==1) + updated_mean*(foreground_mask_denoised==0)
             #self.mean_px[foreground_mask_denoised==0] = updated_mean
-            np.putmask(self.mean_px, foreground_mask_denoised==0, updated_mean)
+            #np.putmask(self.mean_px, foreground_mask_denoised==0, updated_mean)
             
             # Compute updated std only for background pixels
             updated_dev = np.sqrt( rho * (image_pixels_bg-mean_pixels_bg)**2 + (1-rho) * var_pixels_bg)
-            #self.std_px = self.std_px*(foreground_mask_denoised==1) + updated_dev*(foreground_mask_denoised==0)
+            self.std_px = self.std_px*(foreground_mask_denoised==1) + updated_dev*(foreground_mask_denoised==0)
             #self.std_px[foreground_mask_denoised==0] = updated_dev
-            np.putmask(self.std_px, foreground_mask_denoised==0, updated_dev)
+            #np.putmask(self.std_px, foreground_mask_denoised==0, updated_dev)
 
         return detections

@@ -23,12 +23,12 @@ def denoise_mask(mask, method):
         return mask
 
 
-def fg_segmentation_to_boxes(frame, i, box_min_size=(10, 10), cls='car'):
-    detections = []
-    _, contours, _ = cv2.findContours(frame, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
-    for contour in contours:
-        (x, y, w, h) = cv2.boundingRect(contour)
-        if w > box_min_size[0] and h > box_min_size[1]:
-            detections.append([i, cls, 0, x, y, x + w, y + h])
+# def fg_segmentation_to_boxes(frame, i, box_min_size=(10, 10), cls='car'):
+#     detections = []
+#     _, contours, _ = cv2.findContours(frame, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+#     for contour in contours:
+#         (x, y, w, h) = cv2.boundingRect(contour)
+#         if w > box_min_size[0] and h > box_min_size[1]:
+#             detections.append([i, cls, 0, x, y, x + w, y + h])
 
-    return detections
+#     return detections
