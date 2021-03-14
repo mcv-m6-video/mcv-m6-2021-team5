@@ -86,7 +86,8 @@ class GaussianBGEstimator:
         Test the computed model
         Params:
             color: True: color images, False: grayscale
-            frames_to_test: 
+            N_test_start: if None, all images are tested
+            N_test_end: if None, all images are tested
         Returns:
             List of lists of BBs [[BB,BB...],...]
         """
@@ -145,13 +146,10 @@ class GaussianBGEstimator:
                 plot_detections(frame_dets)
         return detections
 
-
-    def test_adaptive(self, indices=None, color=False, alpha=1, rho=0.1):
+    def test_adaptive(self, color=False, alpha=1, rho=0.1, vis=False, N_test_start=None, N_test_end=None):
         """
         Test the computed model using the adaptive method
         Params:
-            indices: indicates the indices of the images to test. If unspecified
-                     this will test for all the test images
             color: True: color images, False: grayscale
         Returns:
             List of lists of BBs [[BB,BB...],...]
