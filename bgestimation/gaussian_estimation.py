@@ -10,6 +10,7 @@ from utils.bb import BB
 import pickle as pkl
 from utils.plotting import plot_detections
 from bgestimation.mask_utils import *
+from sklearn.mixture import GaussianMixture
 
 class GaussianBGEstimator:
 
@@ -20,7 +21,7 @@ class GaussianBGEstimator:
         mask_path: path to output masks directory
         train_ratio: percentage of frames to use as train set
     """
-    def __init__(self, img_path, mask_path, train_ratio=0.25):
+    def __init__(self, img_path, mask_path, train_ratio=0.25, n_components=10):
         self.img_path = img_path
         self.mask_path = mask_path
 
@@ -36,6 +37,12 @@ class GaussianBGEstimator:
         self.N_train = math.floor(self.train_ratio*len(self.img_list))
         self.N_test_start = self.N_train
         self.N_test_end = len(self.img_list)
+
+        # Set parameters for GMM
+        self.n_components = n_components
+        self.GMM_weights = np.zeros(n_components)
+        self.GMM_means = np.zeros(n_components)
+        self.GMM_variances = np.zeros(n_components)
 
     def load_pretrained(self, filename):
         with open(filename, 'rb') as f:
@@ -80,6 +87,35 @@ class GaussianBGEstimator:
         self.std_px = np.sqrt(self.std_px/(self.N_train-1))
 
         return self.mean_px, self.std_px   
+
+    def init_GMM(self, color=False):
+        """
+        This function returns a GMM estimation from the initial train frames
+        This assumes that all images have the same size 
+        for speed purposes
+        """
+
+        print('Initializing GMM:')
+        # Get image size with first image
+        img_size = np.shape(cv2.imread(self.img_list[0], cv2.IMREAD_COLOR if color else cv2.IMREAD_GRAYSCALE))
+        w,h = img_size[0:2]
+
+        #Allocate space for image intensities array
+        init_data = np.zeros(self.N_train,w,h)
+
+        #Prepare data to fit the GMM
+        print('Initializing GMM from frames 0-' + str(self.N_train) + ':')
+        i=0
+        for filename in tqdm(self.img_list[0:self.N_train]):
+            img = cv2.imread(filename, cv2.IMREAD_COLOR if color else cv2.IMREAD_GRAYSCALE)
+            init_data[i,:,:] = img
+            i+=1
+        np.ravel(init_data) #Flatten input data array
+
+        #Fit GMM 
+        gm = GaussianMixture(n_components=self.n_components, covariance_type='spherical').fit(init_data)
+
+        return self.GMM_weights, self.GMM_means, self.GMM_variances
     
     def test(self, color=False, alpha=1.75, vis=False, N_test_start=None, N_test_end=None):
         """
@@ -223,3 +259,6 @@ class GaussianBGEstimator:
             #np.putmask(self.std_px, foreground_mask_denoised==0, updated_dev)
 
         return detections
+    
+    def test_GMM(self, color=False)
+    return 0
