@@ -101,7 +101,7 @@ class GaussianBGEstimator:
         w,h = img_size[0:2]
 
         #Allocate space for image intensities array
-        init_data = np.zeros(self.N_train,w,h)
+        init_data = np.zeros((self.N_train,w,h))
 
         #Prepare data to fit the GMM
         print('Initializing GMM from frames 0-' + str(self.N_train) + ':')
@@ -110,10 +110,14 @@ class GaussianBGEstimator:
             img = cv2.imread(filename, cv2.IMREAD_COLOR if color else cv2.IMREAD_GRAYSCALE)
             init_data[i,:,:] = img
             i+=1
-        np.ravel(init_data) #Flatten input data array
+        init_data = init_data.reshape((self.N_train*w*h, 1)) #Flatten input data array
+        print(np.shape(init_data))
 
         #Fit GMM 
-        gm = GaussianMixture(n_components=self.n_components, covariance_type='spherical').fit(init_data)
+        gm = GaussianMixture(n_components=self.n_components, covariance_type='spherical', max_iter=50).fit(init_data)
+        self.GMM_weights = gm.weights_
+        self.GMM_means = gm.means_
+        self.GMM_variances = gm.covariances_
 
         return self.GMM_weights, self.GMM_means, self.GMM_variances
     
@@ -265,5 +269,5 @@ class GaussianBGEstimator:
 
         return detections
     
-    def test_GMM(self, color=False)
-    return 0
+    def test_GMM(self, color=False):
+        return 0
