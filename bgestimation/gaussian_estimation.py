@@ -130,7 +130,7 @@ class GaussianBGEstimator:
 
         return self.GMM_weights, self.GMM_means, self.GMM_dev
     
-    def test(self, color=False, alpha=6, vis=False, N_test_start=None, N_test_end=None):
+    def test(self, alpha=6, vis=False, N_test_start=None, N_test_end=None):
         """
         Test the computed model
         Params:
@@ -203,7 +203,7 @@ class GaussianBGEstimator:
             #     plot_detections(frame_dets)
         return detections
 
-    def test_adaptive(self, color=False, alpha=3, rho=0.01, vis=False, N_test_start=None, N_test_end=None):
+    def test_adaptive(self, alpha=3, rho=0.01, vis=False, N_test_start=None, N_test_end=None):
         """
         Test the computed model using the adaptive method
         Params:
