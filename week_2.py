@@ -39,8 +39,10 @@ def main():
     gestimator = GaussianBGEstimator(img_path, mask_path)
     gestimator.load_pretrained('models/gaussian.pkl')
 
-    bb_ge = gestimator.test(vis=True, N_test_start = 535, N_test_end = 555)
-    bb_gea = gestimator.test_adaptive(vis=True, N_test_start = 535, N_test_end = 555)
+    start = 535
+    end = 635
+    bb_ge = gestimator.test(vis=True, N_test_start = start, N_test_end = end)
+    bb_gea = gestimator.test_adaptive(vis=True, N_test_start = start, N_test_end = end)
 
     # Read GT
     reader = AnnotationReader(gt_path)
