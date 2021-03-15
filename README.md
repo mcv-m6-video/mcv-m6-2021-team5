@@ -28,6 +28,7 @@ In order to preview the different detections in the frames, vdo.avi should be do
 `pip install xmltodict`
 `pip install tqdm`
 `pip install scipy`
+`pip install sklearn`
   
 ## Execution  :gear:
 The program is executed as follows:
