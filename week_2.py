@@ -10,8 +10,6 @@ import math
 
 from bgestimation.gaussian_estimation import GaussianBGEstimator
 
-f = open("results.txt", "a")
-
 #Paths to images
 gt_path = 'datasets/aicity/ai_challenge_s03_c010-full_annotation.xml'
 img_path = 'datasets/aicity/AICity_data/train/S03/c010/frames/'
@@ -41,9 +39,6 @@ def main():
     gestimator = GaussianBGEstimator(img_path, mask_path)
     gestimator.load_pretrained('models/gaussian.pkl')
 
-    start = 535
-    end = 536
-
     # Read GT
     reader = AnnotationReader(gt_path)
     gt = reader.get_bboxes_per_frame(classes=['car'])
@@ -54,25 +49,25 @@ def main():
     for frame in range(gestimator.N_test_start, gestimator.N_test_end):
         bb_gt.append(gt[frame])
 
-    alphas = [6, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5, 7, 7.5]
+    alphas = [2, 3, 4, 5, 6, 7]
     rhos = [0.0, 0.2, 0.4, 0.6, 0.8, 1.0]
 
     for alpha in alphas:
         for rho in rhos:
-            print("Experiment with alpha = " + str(alpha) + " and rho = " + str(rho), file=f)
+            print("Experiment with alpha = " + str(alpha) + " and rho = " + str(rho))
             mask_path_new = 'datasets/aicity/AICity_data/train/S03/c010/masks' + '_' + str(alpha) + '_' + str(rho) + '/'
-            bb_ge = gestimator.test(alpha=alpha, vis=True, N_test_start = start, N_test_end = end)
-            bb_ge = gestimator.test(alpha=alpha, vis=True, N_test_start = start, N_test_end = end)
-            bb_gea = gestimator.test_adaptive(alpha=alpha, rho=rho, vis=True, N_test_start = start, N_test_end = end)
-            #bb_ge = gestimator.test(alpha=alpha, vis=False)
-            #bb_gea = gestimator.test_adaptive(alpha=alpha, rho=rho, vis=False)
+            gestimator.create_mask_path(mask_path_new)
+            # bb_ge = gestimator.test(alpha=alpha, vis=True, N_test_start = start, N_test_end = end)
+            # bb_gea = gestimator.test_adaptive(alpha=alpha, rho=rho, vis=True, N_test_start = start, N_test_end = end)
+            bb_ge = gestimator.test(alpha=alpha, vis=False)
+            bb_gea = gestimator.test_adaptive(alpha=alpha, rho=rho, vis=False)
 
             # Evaluate
             map, _, _ = mean_average_precision(bb_gt, bb_ge)
-            print('Gaussian estimator mAP: ' + str(map), file=f)
+            print('Gaussian estimator mAP: ' + str(map))
 
             map, _, _ = mean_average_precision(bb_gt, bb_gea)
-            print('Gaussian Adaptive estimator mAP: ' + str(map), file=f)
+            print('Gaussian Adaptive estimator mAP: ' + str(map))
 
     
 main()
