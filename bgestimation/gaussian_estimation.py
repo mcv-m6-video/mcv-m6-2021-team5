@@ -21,7 +21,7 @@ class GaussianBGEstimator:
         mask_path: path to output masks directory
         train_ratio: percentage of frames to use as train set
     """
-    def __init__(self, img_path, mask_path, train_ratio=0.25, n_components=10):
+    def __init__(self, img_path, mask_path, train_ratio=0.25, n_components=10, GMM_threshold=0.8, GMM_alpha=0.05):
         self.img_path = img_path
         self.mask_path = mask_path
 
@@ -42,7 +42,9 @@ class GaussianBGEstimator:
         self.n_components = n_components
         self.GMM_weights = np.zeros(n_components)
         self.GMM_means = np.zeros(n_components)
-        self.GMM_variances = np.zeros(n_components)
+        self.GMM_dev = np.zeros(n_components)
+        self.GMM_threshold = GMM_threshold
+        self.GMM_alpha = GMM_alpha
 
     def load_pretrained(self, filename):
         with open(filename, 'rb') as f:
@@ -52,7 +54,7 @@ class GaussianBGEstimator:
         with open(filename,'wb') as f:
             pkl.dump([self.mean_px, self.std_px], f)
 
-    def train(self, color=False):
+    def train(self):
         """
         This function returns a numpy array of train images
         This assumes that all images have the same size 
@@ -61,34 +63,30 @@ class GaussianBGEstimator:
 
         print('Training estimator:')
         # Get image size with first image
-        img_size = np.shape(cv2.imread(self.img_list[0], cv2.IMREAD_COLOR if color else cv2.IMREAD_GRAYSCALE))
+        img_size = np.shape(cv2.imread(self.img_list[0], cv2.IMREAD_GRAYSCALE))
         w,h = img_size[0:2]
 
         # Preallocate numpy array for speed
-        if color:
-            self.mean_px = np.zeros((w,h,3))
-            self.std_px = np.zeros((w,h,3))
-        else:
-            self.mean_px = np.zeros((w,h))
-            self.std_px = np.zeros((w,h))
+        self.mean_px = np.zeros((w,h))
+        self.std_px = np.zeros((w,h))
 
         # Two pass method: first compute mean then std
         print('[1/2] Computing mean for training frames [' + str(self.N_test_start) + '-' + str(self.N_test_end) + ']:')
         for filename in tqdm(self.img_list[0:self.N_train]):
-            img = cv2.imread(filename, cv2.IMREAD_COLOR if color else cv2.IMREAD_GRAYSCALE)
+            img = cv2.imread(filename, cv2.IMREAD_GRAYSCALE)
             self.mean_px += img
         self.mean_px /= self.N_train
 
         print('[2/2] Computing std for training frames (' + str(np.shape(self.img_list[0:self.N_train])[0]) + '/' + str(np.shape(self.img_list)[0]) + '):')
         for filename in tqdm(self.img_list[0:self.N_train]):
-            img = cv2.imread(filename, cv2.IMREAD_COLOR if color else cv2.IMREAD_GRAYSCALE)
+            img = cv2.imread(filename, cv2.IMREAD_GRAYSCALE)
             self.std_px += (img - self.mean_px) * (img - self.mean_px)
         print(filename)
         self.std_px = np.sqrt(self.std_px/(self.N_train-1))
 
         return self.mean_px, self.std_px   
 
-    def init_GMM(self, color=False):
+    def init_GMM(self):
         """
         This function returns a GMM estimation from the initial train frames
         This assumes that all images have the same size 
@@ -97,7 +95,7 @@ class GaussianBGEstimator:
 
         print('Initializing GMM:')
         # Get image size with first image
-        img_size = np.shape(cv2.imread(self.img_list[0], cv2.IMREAD_COLOR if color else cv2.IMREAD_GRAYSCALE))
+        img_size = np.shape(cv2.imread(self.img_list[0], cv2.IMREAD_GRAYSCALE))
         w,h = img_size[0:2]
 
         #Allocate space for image intensities array
@@ -107,7 +105,7 @@ class GaussianBGEstimator:
         print('Initializing GMM from frames 0-' + str(self.N_train) + ':')
         i=0
         for filename in tqdm(self.img_list[0:self.N_train]):
-            img = cv2.imread(filename, cv2.IMREAD_COLOR if color else cv2.IMREAD_GRAYSCALE)
+            img = cv2.imread(filename, cv2.IMREAD_GRAYSCALE)
             init_data[i,:,:] = img
             i+=1
         init_data = init_data.reshape((self.N_train*w*h, 1)) #Flatten input data array
@@ -115,17 +113,18 @@ class GaussianBGEstimator:
 
         #Fit GMM 
         gm = GaussianMixture(n_components=self.n_components, covariance_type='spherical', max_iter=50).fit(init_data)
-        self.GMM_weights = gm.weights_
-        self.GMM_means = gm.means_
-        self.GMM_variances = gm.covariances_
 
-        return self.GMM_weights, self.GMM_means, self.GMM_variances
+        order = np.flip(np.argsort(gm.weights_))
+        self.GMM_weights = np.take_along_axis(gm.weights_, order, axis=0)
+        self.GMM_means = np.take_along_axis(gm.means_.reshape(self.n_components), order, axis=0)
+        self.GMM_dev = np.take_along_axis(np.sqrt(gm.covariances_), order, axis=0)
+
+        return self.GMM_weights, self.GMM_means, self.GMM_dev
     
-    def test(self, color=False, alpha=1.75, vis=False, N_test_start=None, N_test_end=None):
+    def test(self, alpha=1.75, vis=False, N_test_start=None, N_test_end=None):
         """
         Test the computed model
         Params:
-            color: True: color images, False: grayscale
             N_test_start: if None, all images are tested
             N_test_end: if None, all images are tested
         Returns:
@@ -146,7 +145,7 @@ class GaussianBGEstimator:
         for filename in tqdm(self.img_list[self.N_test_start:self.N_test_end]):
 
             # Read image
-            img = cv2.imread(filename, cv2.IMREAD_COLOR if color else cv2.IMREAD_GRAYSCALE)
+            img = cv2.imread(filename, cv2.IMREAD_GRAYSCALE)
             frame_name = os.path.split(filename)[1].split(".")[0]
             frame_num = frame_name.split("_")[1]
 
@@ -186,11 +185,10 @@ class GaussianBGEstimator:
             #     plot_detections(frame_dets)
         return detections
 
-    def test_adaptive(self, color=False, alpha=1.75, rho=0.9, vis=False, N_test_start=None, N_test_end=None):
+    def test_adaptive(self, alpha=1.75, rho=0.9, vis=False, N_test_start=None, N_test_end=None):
         """
         Test the computed model using the adaptive method
         Params:
-            color: True: color images, False: grayscale
             N_test_start: if None, all images are tested
             N_test_end: if None, all images are tested
         Returns:
@@ -211,7 +209,7 @@ class GaussianBGEstimator:
         for filename in tqdm(self.img_list[self.N_test_start:self.N_test_end]):
             
             # Read image
-            img = cv2.imread(filename, cv2.IMREAD_COLOR if color else cv2.IMREAD_GRAYSCALE)
+            img = cv2.imread(filename, cv2.IMREAD_GRAYSCALE)
             frame_name = os.path.split(filename)[1].split(".")[0]
             frame_num = frame_name.split("_")[1]
 
@@ -269,5 +267,161 @@ class GaussianBGEstimator:
 
         return detections
     
-    def test_GMM(self, color=False):
-        return 0
+    def test_GMM(self, alpha=1.75, rho=0.9, vis=False, N_test_start=None, N_test_end=None):
+        """
+        Test the computed model using the adaptive GMM method
+        Params:
+            N_test_start: if None, all images are tested
+            N_test_end: if None, all images are tested
+        Returns:
+            List of lists of BBs [[BB,BB...],...]
+        """
+        print('Testing estimator:')
+
+        # Costomize frames to test (if None, all images are tested)
+        if N_test_start != None:
+            self.N_test_start = N_test_start
+        
+        if N_test_end != None:
+            self.N_test_end = N_test_end
+        
+        # Get image size with first image
+        img_size = np.shape(cv2.imread(self.img_list[0], cv2.IMREAD_GRAYSCALE))
+        im_w,im_h = img_size[0:2]
+
+        # For all the images to test
+        detections = []
+        print('[1/1] Computing foreground masks for testing frames [' + str(self.N_test_start) + '-' + str(self.N_test_end) + ']:')
+        count=0
+
+        for filename in tqdm(self.img_list[self.N_test_start:self.N_test_end]):
+            print(count)
+            count += 1
+
+            # Read image
+            img = cv2.imread(filename, cv2.IMREAD_GRAYSCALE)
+            frame_name = os.path.split(filename)[1].split(".")[0]
+            frame_num = frame_name.split("_")[1]
+
+            #### UPDATE GAUSSIANS
+
+            n_pixels_i = np.zeros(self.n_components, dtype=int)
+            assigned = np.zeros((im_w,im_h), dtype=bool)
+            assigned_int = np.zeros((im_w,im_h))
+            ratio = np.zeros((self.n_components,im_w,im_h))
+            masks = np.zeros((self.n_components,im_w,im_h), dtype=bool)
+
+            #Find closest Gaussian
+            for i in range(self.n_components):
+                ratio[i,:,:] = np.abs(img-self.GMM_means[i])/(self.GMM_dev[i]+2)
+
+            min_ratios = np.min(ratio, axis=0)
+            assigned_int = np.argmin(ratio, axis=0)
+
+            #Keep only pixels that satisfy the classification criteria
+            for i in range(self.n_components):
+                mask_i = (assigned_int==i).astype(np.uint8)
+                masks_i = min_ratios <= alpha
+                masks_i = masks_i*mask_i
+                assigned = np.logical_or(assigned, masks_i)
+                masks[i] = masks_i
+
+            masks = masks.astype(np.uint8)
+            unassigned_mask = np.logical_not(assigned).astype(np.uint8)
+            
+            for i in range(self.n_components):
+                image_i = img*masks[i]
+                n_pixels_i[i]=np.sum(masks[i])
+
+                #Update parameters of existing Gaussians
+                self.GMM_means[i] = rho * np.sum(image_i)/n_pixels_i[i] + (1-rho) * self.GMM_means[i]
+                self.GMM_dev[i] = np.sqrt( rho * (np.sum((image_i-self.GMM_means[i])**2)/n_pixels_i[i]) + (1-rho) * np.sum(self.GMM_means[i]**2))
+
+            #Crete a new Gasussian from unassigned pixels
+            if(np.sum(unassigned_mask)!=0):
+                image_unassigned = img*unassigned_mask
+                n_pixels_i[-1] = np.sum(unassigned_mask)
+
+                assigned_int[assigned_int==self.n_components-1]=self.n_components #Pixels from the deleted Gaussian
+                assigned_int[unassigned_mask==1]=self.n_components - 1 #Pixels from the new Gaussian
+                masks[-1]=unassigned_mask
+
+                self.GMM_means[-1] = np.sum(image_unassigned)/n_pixels_i[-1]
+                self.GMM_dev[-1] = np.sqrt(np.sum((image_unassigned-self.GMM_means[-1])**2)/n_pixels_i[-1])
+                self.GMM_weights[:-1] = self.GMM_weights[:-1] + self.GMM_weights[-1]/(self.n_components-1)
+                self.GMM_weights[-1] = 0.0
+                
+
+            ### UPDATE WEIGHTS
+            #Create randmoly shuffled array of size w*h containing the indices of the Gaussians the pixels have been assigned to   
+            #indices = np.zeros(im_w*im_h, dtype=np.uint8)
+            #offset = n_pixels_i[0]
+            #for i in range(1, self.n_components):
+            #   indices[offset:offset+n_pixels_i[i]] = i*np.ones(n_pixels_i[i], dtype=np.uint8)
+            #offset += n_pixels_i[i]
+            #np.random.shuffle(indices)
+            flat_assigned_int = assigned_int.flatten()
+            flat_assigned_int = np.delete(flat_assigned_int, np.where(flat_assigned_int == self.n_components))
+
+            #Update weights pixel-wise according to indices vector
+            all_indices = np.arange(self.n_components)
+            #for i in indices:
+            for i in flat_assigned_int:
+                self.GMM_weights[i] = (1-self.GMM_alpha)*self.GMM_weights[i] + self.GMM_alpha
+                others = np.delete(all_indices, i)
+                for j in others:
+                    self.GMM_weights[j] = self.GMM_weights[j]*(1-self.GMM_alpha)
+                
+
+            ### ORDER GAUSSIANS
+            order = np.flip(np.argsort(self.GMM_weights/self.GMM_dev))
+            self.GMM_weights = np.take_along_axis(self.GMM_weights, order, axis=0)
+            self.GMM_means = np.take_along_axis(self.GMM_means, order, axis=0)
+            self.GMM_dev = np.take_along_axis(self.GMM_dev, order, axis=0)  
+            new_masks = np.zeros((self.n_components,im_w,im_h))
+            for i in range(self.n_components):
+                new_masks[i] = masks[order[i]] 
+            masks = new_masks
+            
+            ### CLASSIFY
+            #Classify Gaussians as backround and foreground
+            sum_w = self.GMM_weights[0]
+            for k in range(1,self.n_components):
+                if sum_w >self.GMM_threshold:
+                    break
+                sum_w += self.GMM_weights[k]
+            
+            #Create foreground mask 
+            background_mask = np.zeros((im_w, im_h))
+            for i in range(k):
+                background_mask = background_mask + masks[i]
+            #foreground_mask = (1 - background_mask).astype(np.uint8)  # Convert to an unsigned byte
+            foreground_mask = background_mask
+            foreground_mask*=255
+
+            foreground_mask_denoised = denoise_mask(foreground_mask, method=2)
+
+            # Save masks
+            if vis:
+                cv2.imwrite(self.mask_path + 'mask_' + str(frame_name) + '_raw_ad.png', foreground_mask)
+                #cv2.imwrite(self.mask_path + 'mask_' + str(frame_name) + '_denoised_1.png', foreground_mask_denoised_1)
+                cv2.imwrite(self.mask_path + 'mask_' + str(frame_name) + '_denoised_ad.png', foreground_mask_denoised)
+             
+        
+            # Get the number of connected components
+            output = cv2.connectedComponentsWithStats(foreground_mask_denoised)
+            (numLabels, _, stats, _) = output
+
+            frame_dets = []
+            for i in range(1,numLabels):
+                x = stats[i, cv2.CC_STAT_LEFT]
+                y = stats[i, cv2.CC_STAT_TOP]
+                w = stats[i, cv2.CC_STAT_WIDTH]
+                h = stats[i, cv2.CC_STAT_HEIGHT]
+                frame_dets.append( BB(int(frame_num), i, 'car', x, y, x+w, y+h, 1) )
+            detections.append(frame_dets)
+
+            # if vis:
+            #     plot_detections(frame_dets)
+
+        return detections
