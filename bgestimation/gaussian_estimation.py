@@ -44,6 +44,15 @@ class GaussianBGEstimator:
         self.GMM_means = np.zeros(n_components)
         self.GMM_variances = np.zeros(n_components)
 
+    def create_mask_path(self, mask_path):
+        # Create mask path
+        if os.path.exists(mask_path):
+            shutil.rmtree(mask_path)
+        os.makedirs(mask_path)
+
+        self.mask_path = mask_path
+
+
     def load_pretrained(self, filename):
         with open(filename, 'rb') as f:
             self.mean_px, self.std_px = pkl.load(f)
@@ -195,7 +204,7 @@ class GaussianBGEstimator:
             #     plot_detections(frame_dets)
         return detections
 
-    def test_adaptive(self, color=False, alpha=6, rho=0.01, vis=False, N_test_start=None, N_test_end=None):
+    def test_adaptive(self, color=False, alpha=3, rho=0.01, vis=False, N_test_start=None, N_test_end=None):
         """
         Test the computed model using the adaptive method
         Params:
@@ -230,12 +239,6 @@ class GaussianBGEstimator:
             foreground_mask*=255
 
             foreground_mask_denoised = denoise_mask(foreground_mask, method=3)
-
-            # Save masks
-            if vis:
-                cv2.imwrite(self.mask_path + 'mask_' + str(frame_name) + '_raw_ad.png', foreground_mask)
-                cv2.imwrite(self.mask_path + 'mask_' + str(frame_name) + '_denoised_ad.png', foreground_mask_denoised)
-             
         
             # # Method 1: connected components
             # output = cv2.connectedComponentsWithStats(foreground_mask_denoised)
@@ -264,19 +267,25 @@ class GaussianBGEstimator:
                 if w > 20 and h > 10:
                     frame_dets.append(BB(int(frame_num), None, 'car', x, y, x+w, y+h, 1))
                     j = j+1
-                cv2.rectangle(foreground_mask_bbs,(x,x+w),(y,y+h),(255,255,255),-1)
-            detections.append(frame_dets)
+                cv2.rectangle(foreground_mask_bbs,(x, y),(x + w, y + h),(255,255,255),-1)
+            detections.append(frame_dets)       
+            # Save masks
+            if vis:
+                cv2.imwrite(self.mask_path + 'mask_' + str(frame_name) + '_raw_ad.png', foreground_mask)
+                cv2.imwrite(self.mask_path + 'mask_' + str(frame_name) + '_denoised_ad.png', foreground_mask_denoised)
+                cv2.imwrite(self.mask_path + 'mask_' + str(frame_name) + '_denoised_bbs_ad.png', foreground_mask_bbs)
 
-            foreground_mask_bbs = foreground_mask_bbs/255
-            # plt.imshow(foreground_mask_bbs)
-            # plt.show()
+            # Convert mask to boolean
+            foreground_mask_bbs = foreground_mask_bbs > 0
+
+            # print(foreground_mask_bbs)
 
             # if vis:
             #     plot_detections(frame_dets)
 
             # Update model
-            fg_pixels = foreground_mask_bbs==1
-            bg_pixels = foreground_mask_bbs==0
+            fg_pixels = foreground_mask_denoised==True
+            bg_pixels = foreground_mask_denoised==False
             fg_pixels = fg_pixels.astype(np.uint8)
             bg_pixels = bg_pixels.astype(np.uint8)
 
