@@ -9,6 +9,7 @@ import numpy as np
 import math 
 
 from bgestimation.gaussian_estimation import GaussianBGEstimator
+from bgestimation.color_gaussian_estimation import ColorGaussianBGEstimator
 
 #Paths to images
 gt_path = 'datasets/aicity/ai_challenge_s03_c010-full_annotation.xml'
@@ -69,5 +70,15 @@ def main():
             map, _, _ = mean_average_precision(bb_gt, bb_gea)
             print('Gaussian Adaptive estimator mAP: ' + str(map))
 
+            #print('Initialize GMM:')
+            #gestimator = GaussianBGEstimator(img_path, mask_path, train_ratio=0.005, n_components=12)
+            #gestimator.init_GMM()
+            #print(gestimator.GMM_weights)
+
+            #print('Test GMM:')
+            #bb_gmm = gestimator.test_GMM(vis=True, N_test_start = 535, N_test_end = 560)
+
     
 main()
+
+    

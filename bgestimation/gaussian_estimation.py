@@ -21,7 +21,7 @@ class GaussianBGEstimator:
         mask_path: path to output masks directory
         train_ratio: percentage of frames to use as train set
     """
-    def __init__(self, img_path, mask_path, train_ratio=0.25, n_components=10, GMM_threshold=0.8, GMM_alpha=0.05):
+    def __init__(self, img_path, mask_path, train_ratio=0.25, n_components=10, GMM_threshold=0.8, GMM_alpha=0.1):
         self.img_path = img_path
         self.mask_path = mask_path
 

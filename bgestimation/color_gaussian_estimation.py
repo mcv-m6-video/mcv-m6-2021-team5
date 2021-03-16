@@ -44,8 +44,6 @@ class ColorGaussianBGEstimator:
 
         if self.color_space == 'rgb':
             self.n_channels = 3
-            self.mean_px = np.zeros((w,h,3))
-            self.std_px = np.zeros((w,h,3))
 
     def load_pretrained(self, filename):
         with open(filename, 'rb') as f:
@@ -71,17 +69,23 @@ class ColorGaussianBGEstimator:
 
         # Two pass method: first compute mean then std
         print('[1/2] Computing mean for training frames [' + str(self.N_test_start) + '-' + str(self.N_test_end) + ']:')
-        for filename in tqdm(self.img_list[0:self.N_train]):
-            img = cv2.imread(filename, cv2.IMREAD_COLOR)
-            self.mean_px += img
-        self.mean_px /= self.N_train
+        
+        if independent:
+            self.mean_px = np.zeros((w,h,3))
+            self.std_px = np.zeros((w,h,3))
+
+            for filename in tqdm(self.img_list[0:self.N_train]):
+                img = cv2.imread(filename, cv2.IMREAD_COLOR)
+                self.mean_px += img
+            self.mean_px /= self.N_train
 
         print('[2/2] Computing std for training frames (' + str(np.shape(self.img_list[0:self.N_train])[0]) + '/' + str(np.shape(self.img_list)[0]) + '):')
-        for filename in tqdm(self.img_list[0:self.N_train]):
-            img = cv2.imread(filename, cv2.IMREAD_COLOR)
-            self.std_px += (img - self.mean_px) * (img - self.mean_px)
-        print(filename)
-        self.std_px = np.sqrt(self.std_px/(self.N_train-1))
+        if independent:
+            for filename in tqdm(self.img_list[0:self.N_train]):
+                img = cv2.imread(filename, cv2.IMREAD_COLOR)
+                self.std_px += (img - self.mean_px) * (img - self.mean_px)
+            print(filename)
+            self.std_px = np.sqrt(self.std_px/(self.N_train-1))
 
         return self.mean_px, self.std_px   
 
@@ -113,15 +117,16 @@ class ColorGaussianBGEstimator:
             frame_name = os.path.split(filename)[1].split(".")[0]
             frame_num = frame_name.split("_")[1]
 
-            # Create a mask with foreground pixels from each chan
-            foreground_masks = (img-self.mean_px > alpha*(self.std_px + 2))
-            
-            # Merge the masks from the different channels
-            foreground_masks = np.zeros((self.im_w,self.im_h), dtype=bool)
-            for i in range(self.n_channels)
-                foreground_mask = np.logical_or(foreground_mask, foreground_masks[i])
-            foreground_masks = foreground_masks.astype(np.uint8)  # Convert to an unsigned byte
-            foreground_masks*=255
+            if independent:
+                # Create a mask with foreground pixels from each chan
+                foreground_masks = (img-self.mean_px > alpha*(self.std_px + 2))
+                
+                # Merge the masks from the different channels
+                foreground_masks = np.zeros((self.im_w,self.im_h), dtype=bool)
+                for i in range(self.n_channels)
+                    foreground_mask = np.logical_or(foreground_mask, foreground_masks[i])
+                foreground_masks = foreground_masks.astype(np.uint8)  # Convert to an unsigned byte
+                foreground_masks*=255
 
             # Denoise mask
             #foreground_mask_denoised_1 = denoise_mask(foreground_mask, method=1)
