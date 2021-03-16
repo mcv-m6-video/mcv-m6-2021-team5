@@ -85,7 +85,7 @@ class OpenCVBGEstimators:
             j = 1
             for con in contours:
                 (x, y, w, h) = cv2.boundingRect(con)
-                if w > 20 and h > 10 and w*h > 450 and w < 4*h and h < 4*w: #and w*h < 5E5:
+                if w > 20 and h > 10 and w*h > 550 and w < 3.5*h and h < 3.5*w and w*h < 5E5:
                     frame_dets.append(BB(int(frame_num), None, 'car', x, y, x+w, y+h, 1))
                     cv2.rectangle(img,(x,y),(x+w,y+h),(0,255,0),3)
                     j = j+1

@@ -36,9 +36,20 @@ def task1_1(train, val, gt):
 
 def main():
 
-    # Parameters
-    start = 535
-    end = 2141
+    ## TASKS 1-2
+    print('\n\n------------------- Initialization -------------------')
+    
+    # Create model and infer the results
+    # gestimator = GaussianBGEstimator(img_path, mask_path)
+    # gestimator.load_pretrained('models/gaussian.pkl')
+
+    color_gestimator = ColorGaussianBGEstimator(img_path, mask_path, color_space='h')
+    color_gestimator.load_pretrained('models/h_independent.pkl')
+    #color_gestimator.train()
+    #color_gestimator.save_trained('models/h_independent.pkl')
+
+    bb_ge = color_gestimator.test(alpha=6, vis=True, N_test_end = 560)
+    bb_gea = color_gestimator.test_adaptive(alpha=6, vis=True, N_test_end = 560)
 
     # Read GT
     reader = AnnotationReader(gt_path)
@@ -57,31 +68,32 @@ def main():
         bb_gt.append(boxes)
 
     print('\n\n------------------- Task 1: Gaussian models -------------------')
-    """
+    
     # Create gray model
     gestimator = GaussianBGEstimator(img_path, mask_path)
     gestimator.load_pretrained('models/gaussian.pkl')
 
     # Create color model
-    color_gestimator = ColorGaussianBGEstimator(img_path, mask_path)
-    color_gestimator.load_pretrained('models/rgb_independent.pkl')
+    #color_gestimator = ColorGaussianBGEstimator(img_path, mask_path)
+    #color_gestimator.load_pretrained('models/rgb_independent.pkl')
     
     # Test gray adaptive and non-adaptive
-    bb_ge = gestimator.test(vis=True, N_test_start = start, N_test_end = end)
+    #bb_ge = gestimator.test(vis=True, N_test_start = start, N_test_end = end)
     bb_gea = gestimator.test_adaptive(vis=True, N_test_start = start, N_test_end = end)
     
     # Test color adaptive and non-adaptive
-    bb_ge_color = color_gestimator.test(vis=True, N_test_end = 2000)
-    bb_gea_color = color_gestimator.test_adaptive(vis=True, N_test_end = 2000)
+    #bb_ge_color = color_gestimator.test(vis=True, N_test_end = 2000)
+    #bb_gea_color = color_gestimator.test_adaptive(vis=True, N_test_end = 2000)
 
 
     # Evaluate results
+    """
     map, _, _ = mean_average_precision(bb_gt, bb_ge)
     print('Gaussian gray estimator mAP: ' + str(map))
-
-    map, _, _ = mean_average_precision(bb_gt, bb_gea)
+    """
+    map, _, _ = mean_average_precision(bb_gt, bb_gea, method="area")
     print('Gaussian gray Adaptive estimator mAP: ' + str(map))
-
+    """
     map, _, _ = mean_average_precision(bb_gt, bb_ge_color)
     print('Gaussian color estimator mAP: ' + str(map))
 
@@ -90,6 +102,7 @@ def main():
     """
 
     print('\n\n------------------- Task 2: State of the art evaluation -------------------')
+    """
     # State of the art evaluation
     ocv_estimators = OpenCVBGEstimators(img_path, train_ratio=0.25)
     ocv_estimators.train(models=['MOG2', 'KNN'])
@@ -101,7 +114,7 @@ def main():
     bb_ocv_knn = ocv_estimators.test(model='KNN',N_test_start = start, N_test_end = end)
     map, _, _ = mean_average_precision(bb_gt, bb_ocv_knn)
     print('OCV bg subtraction KNN mAP: ' + str(map))  
-
+    """
 
 
     
