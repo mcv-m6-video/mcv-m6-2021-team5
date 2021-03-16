@@ -58,6 +58,10 @@ class ColorGaussianBGEstimator:
             self.color_flag = cv2.COLOR_BGR2HSV
         if self.color_space == 'ab':
             self.n_channels = 2
+            self.color_flag = cv2.COLOR_BGR2Lab
+        if self.color_space == 'h':
+            self.n_channels = 1
+            self.color_flag = cv2.COLOR_BGR2HSV
 
     def load_pretrained(self, filename):
         with open(filename, 'rb') as f:
@@ -88,7 +92,18 @@ class ColorGaussianBGEstimator:
 
             for filename in tqdm(self.img_list[0:self.N_train]):
                 img = cv2.imread(filename, cv2.IMREAD_COLOR)
-                
+
+                #Convert to the specified color space
+                if self.color_space != 'rgb':
+                    img = cv2.cvtColor(img, self.color_flag)
+                    if self.color_space == 'hs':
+                        img = img[:,:,:2]
+                    if self.color_space == 'h':
+                        img = img[:,:,0]
+                        img = np.reshape(img, (self.im_w, self.im_h, 1))
+                    else:
+                        img = img[:,:,1:] #For color spaces Lab and YCrCb where we only want to keep the chrominance
+
                 self.mean_px += img
             self.mean_px /= self.N_train
 
@@ -96,6 +111,18 @@ class ColorGaussianBGEstimator:
         if self.independent:
             for filename in tqdm(self.img_list[0:self.N_train]):
                 img = cv2.imread(filename, cv2.IMREAD_COLOR)
+
+               #Convert to the specified color space
+                if self.color_space != 'rgb':
+                    img = cv2.cvtColor(img, self.color_flag)
+                    if self.color_space == 'hs':
+                        img = img[:,:,:2]
+                    if self.color_space == 'h':
+                        img = img[:,:,0]
+                        img = np.reshape(img, (self.im_w, self.im_h, 1))
+                    else:
+                        img = img[:,:,1:] #For color spaces Lab and YCrCb where we only want to keep the chrominance
+
                 self.std_px += (img - self.mean_px) * (img - self.mean_px)
             print(filename)
             self.std_px = np.sqrt(self.std_px/(self.N_train-1))
@@ -130,10 +157,35 @@ class ColorGaussianBGEstimator:
             frame_name = os.path.split(filename)[1].split(".")[0]
             frame_num = frame_name.split("_")[1]
 
+            #Convert to the specified color space
+            if self.color_space != 'rgb':
+                img = cv2.cvtColor(img, self.color_flag)
+                if self.color_space == 'hs':
+                    img = img[:,:,:2]
+                if self.color_space == 'h':
+                    img = img[:,:,0]
+                    img = np.reshape(img, (self.im_w, self.im_h, 1))
+                else:
+                    img = img[:,:,1:] #For color spaces Lab and YCrCb where we only want to keep the chrominance
+
             if self.independent:
-                # Create a mask with foreground pixels from each chan
-                foreground_masks = (img-self.mean_px > alpha*(self.std_px + 2))
-                
+                # Create a mask with foreground pixels from each channel
+                if self.color_space == 'hs':
+                    foreground_masks=np.zeros((self.im_w,self.im_h,2), dtype=bool)
+                    foreground_masks[:,:,1] = abs(img[:,:,1]-self.mean_px[:,:,1]) > alpha*(self.std_px[:,:,1] + 2)
+                    hue_diff = abs(img[:,:,0]-self.mean_px[:,:,0])
+                    corrected_hue_diff = np.minimum(179-hue_diff, hue_diff) #Since Hue is in a circular space, the difference needs to be corrected
+                    foreground_masks[:,:,0] = corrected_hue_diff > alpha*(self.std_px[:,:,0] + 2) 
+
+                if self.color_space == 'h':
+                    foreground_masks=np.zeros((self.im_w,self.im_h,1), dtype=bool)
+                    hue_diff = abs(img[:,:,0]-self.mean_px[:,:,0])
+                    corrected_hue_diff = np.minimum(179-hue_diff, hue_diff) #Since Hue is in a circular space, the difference needs to be corrected
+                    foreground_masks[:,:,0] = corrected_hue_diff > alpha*(self.std_px[:,:,0] + 2) 
+
+                else:
+                    foreground_masks = (abs(img-self.mean_px) > alpha*(self.std_px + 2))
+
                 # Merge the masks from the different channels
                 foreground_mask = np.zeros((self.im_w,self.im_h), dtype=bool)
                 for i in range(self.n_channels):
@@ -209,16 +261,37 @@ class ColorGaussianBGEstimator:
             frame_name = os.path.split(filename)[1].split(".")[0]
             frame_num = frame_name.split("_")[1]
 
-            if self.independent:
-                # Create a mask with foreground pixels from each chan
-                foreground_masks = (img-self.mean_px > alpha*(self.std_px + 2))
-                
-                # Merge the masks from the different channels
-                foreground_mask = np.zeros((self.im_w,self.im_h), dtype=bool)
-                for i in range(self.n_channels):
-                    foreground_mask = np.logical_or(foreground_mask, foreground_masks[:,:,i])
-                foreground_mask = foreground_mask.astype(np.uint8)  # Convert to an unsigned byte
-                foreground_mask*=255
+            #Convert to the specified color space
+            if self.color_space != 'rgb':
+                img = cv2.cvtColor(img, self.color_flag)
+                if self.color_space == 'hs':
+                    img = img[:,:,:2]
+                if self.color_space == 'h':
+                    img = img[:,:,0]
+                    img = np.reshape(img, (self.im_w, self.im_h, 1))
+                else:
+                    img = img[:,:,1:] #For color spaces Lab and YCrCb where we only want to keep the chrominance
+
+            if self.color_space == 'hs':
+                foreground_masks=np.zeros((self.im_w,self.im_h,2), dtype=bool)
+                foreground_masks[:,:,1] = abs(img[:,:,1]-self.mean_px[:,:,1]) > alpha*(self.std_px[:,:,1] + 2)
+                hue_diff = abs(img[:,:,0]-self.mean_px[:,:,0])
+                corrected_hue_diff = np.minimum(179-hue_diff, hue_diff) #Since Hue is in a circular space, the difference needs to be corrected
+                foreground_masks[:,:,0] = corrected_hue_diff > alpha*(self.std_px[:,:,0] + 2) 
+            if self.color_space == 'h':
+                    foreground_masks=np.zeros((self.im_w,self.im_h,1), dtype=bool)
+                    hue_diff = abs(img[:,:,0]-self.mean_px[:,:,0])
+                    corrected_hue_diff = np.minimum(179-hue_diff, hue_diff) #Since Hue is in a circular space, the difference needs to be corrected
+                    foreground_masks[:,:,0] = corrected_hue_diff > alpha*(self.std_px[:,:,0] + 2) 
+            else:
+                foreground_masks = (abs(img-self.mean_px) > alpha*(self.std_px + 2))
+         
+            # Merge the masks from the different channels
+            foreground_mask = np.zeros((self.im_w,self.im_h), dtype=bool)
+            for i in range(self.n_channels):
+                foreground_mask = np.logical_or(foreground_mask, foreground_masks[:,:,i])
+            foreground_mask = foreground_mask.astype(np.uint8)  # Convert to an unsigned byte
+            foreground_mask*=255
 
             # Denoise mask
             foreground_mask_denoised = denoise_mask(foreground_mask, method=3)
