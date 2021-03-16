@@ -41,10 +41,14 @@ def main():
     # Create model and infer the results
     # gestimator = GaussianBGEstimator(img_path, mask_path)
     # gestimator.load_pretrained('models/gaussian.pkl')
-    gestimator = ColorGaussianBGEstimator(img_path, mask_path)
-    bb_ge = gestimator.train()
-    bb_gea = gestimator.test(vis=True, N_test_start = 530, N_test_end = 560)
-    #gestimator.test_adaptive(N_test_start = 530, N_test_end = 560)
+
+    color_gestimator = ColorGaussianBGEstimator(img_path, mask_path)
+    color_gestimator.load_pretrained('models/rgb_independent.pkl')
+    #color_gestimator.train()
+    #color_gestimator.save_trained('models/rgb_independent.pkl')
+
+    #bb_ge = color_gestimator.test(vis=True, N_test_end = 2000)
+    bb_gea = color_gestimator.test_adaptive(vis=True, N_test_end = 2000)
 
     # Read GT
     reader = AnnotationReader(gt_path)
@@ -53,11 +57,13 @@ def main():
     # Keep only 75% of the BB GT
     bb_gt = []
     #for frame in gt.keys():
-    for frame in range(gestimator.N_test_start, gestimator.N_test_end):
+    # for frame in range(gestimator.N_test_start, gestimator.N_test_end):
+    #     bb_gt.append(gt[frame])
+    for frame in range(color_gestimator.N_test_start, color_gestimator.N_test_end):
         bb_gt.append(gt[frame])
     
-    map, _, _ = mean_average_precision(bb_gt, bb_ge)
-    print('Gaussian estimator mAP: ' + str(map))
+    # map, _, _ = mean_average_precision(bb_gt, bb_ge)
+    # print('Gaussian estimator mAP: ' + str(map))
 
     map, _, _ = mean_average_precision(bb_gt, bb_gea)
     print('Gaussian Adaptive estimator mAP: ' + str(map))

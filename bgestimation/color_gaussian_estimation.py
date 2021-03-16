@@ -38,6 +38,12 @@ class ColorGaussianBGEstimator:
         self.N_test_start = self.N_train
         self.N_test_end = len(self.img_list)
 
+        #Set image size atributes
+        img_size = np.shape(cv2.imread(self.img_list[0], cv2.IMREAD_COLOR))
+        w,h, = img_size[0:2] 
+        self.im_w = w
+        self.im_h = h 
+
         #Set color parameters
         self.color_space = color_space
         self.independent = independent
@@ -46,7 +52,11 @@ class ColorGaussianBGEstimator:
             self.n_channels = 3
         if self.color_space == 'crcb':
             self.n_channels = 2
+            self.color_flag = cv2.COLOR_BGR2YCrCb
         if self.color_space == 'hs':
+            self.n_channels = 2
+            self.color_flag = cv2.COLOR_BGR2HSV
+        if self.color_space == 'ab':
             self.n_channels = 2
 
     def load_pretrained(self, filename):
@@ -67,19 +77,18 @@ class ColorGaussianBGEstimator:
         print('Training estimator:')
         # Get image size with first image
         img_size = np.shape(cv2.imread(self.img_list[0], cv2.IMREAD_COLOR))
-        w,h, = img_size[0:2] 
-        self.im_w = w
-        self.im_h = h     
+        w,h, = img_size[0:2]     
 
         # Two pass method: first compute mean then std
         print('[1/2] Computing mean for training frames [' + str(0) + '-' + str(self.N_test_start) + ']:')
         
         if self.independent:
-            self.mean_px = np.zeros((w,h,3))
-            self.std_px = np.zeros((w,h,3))
+            self.mean_px = np.zeros((w,h,self.n_channels))
+            self.std_px = np.zeros((w,h,self.n_channels))
 
             for filename in tqdm(self.img_list[0:self.N_train]):
                 img = cv2.imread(filename, cv2.IMREAD_COLOR)
+                
                 self.mean_px += img
             self.mean_px /= self.N_train
 
@@ -200,12 +209,19 @@ class ColorGaussianBGEstimator:
             frame_name = os.path.split(filename)[1].split(".")[0]
             frame_num = frame_name.split("_")[1]
 
-            # Create a mask with foreground pixels
-            foreground_mask = (img-self.mean_px > alpha*(self.std_px + 2))
-            foreground_mask = foreground_mask.astype(np.uint8)  # Convert to an unsigned byte
-            foreground_mask*=255
+            if self.independent:
+                # Create a mask with foreground pixels from each chan
+                foreground_masks = (img-self.mean_px > alpha*(self.std_px + 2))
+                
+                # Merge the masks from the different channels
+                foreground_mask = np.zeros((self.im_w,self.im_h), dtype=bool)
+                for i in range(self.n_channels):
+                    foreground_mask = np.logical_or(foreground_mask, foreground_masks[:,:,i])
+                foreground_mask = foreground_mask.astype(np.uint8)  # Convert to an unsigned byte
+                foreground_mask*=255
 
-            foreground_mask_denoised = denoise_mask(foreground_mask, method=2)
+            # Denoise mask
+            foreground_mask_denoised = denoise_mask(foreground_mask, method=3)
 
             # # Method 1: connected components
             # output = cv2.connectedComponentsWithStats(foreground_mask_denoised)
@@ -256,23 +272,29 @@ class ColorGaussianBGEstimator:
             fg_pixels = fg_pixels.astype(np.uint8)
             bg_pixels = bg_pixels.astype(np.uint8)
 
+            bg_pixels_3d = np.zeros((self.im_w, self.im_h, self.n_channels))
+            fg_pixels_3d = np.zeros((self.im_w, self.im_h, self.n_channels))
+            for ch in range(self.n_channels):
+                bg_pixels_3d[:,:,ch] = bg_pixels
+                fg_pixels_3d[:,:,ch] = fg_pixels
+
             #fg_pixels = foreground_mask_denoised==1
             #bg_pixels = foreground_mask_denoised==0
 
-            image_pixels_bg = img*(bg_pixels)
-            mean_pixels_bg = self.mean_px*(bg_pixels)
-            var_pixels_bg = self.std_px*self.std_px*(bg_pixels)
+            image_pixels_bg = img*(bg_pixels_3d)
+            mean_pixels_bg = self.mean_px*(bg_pixels_3d)
+            var_pixels_bg = self.std_px*self.std_px*(bg_pixels_3d)
 
             # Compute updated mean only for background pixels
             updated_mean = rho * image_pixels_bg + (1-rho) * mean_pixels_bg
-            #self.mean_px = self.mean_px*(fg_pixels) + updated_mean*(bg_pixels)
-            #self.mean_px[bg_pixels] = updated_mean
-            np.putmask(self.mean_px, bg_pixels, updated_mean)
+            #self.mean_px = self.mean_px*(fg_pixels_3d) + updated_mean*(bg_pixels_3d)
+            #self.mean_px[bg_pixels_3d] = updated_mean
+            np.putmask(self.mean_px, bg_pixels_3d, updated_mean)
             
             # Compute updated std only for background pixels
             updated_dev = np.sqrt( rho * (image_pixels_bg-mean_pixels_bg)**2 + (1-rho) * var_pixels_bg)
-            #self.std_px = self.std_px*(fg_pixels) + updated_dev*(bg_pixels)
-            #self.std_px[bg_pixels] = updated_dev
-            np.putmask(self.std_px, bg_pixels, updated_dev)
+            #self.std_px = self.std_px*(fg_pixels_3d) + updated_dev*(bg_pixels_3d)
+            #self.std_px[bg_pixels_3d] = updated_dev
+            np.putmask(self.std_px, bg_pixels_3d, updated_dev)
 
         return detections
