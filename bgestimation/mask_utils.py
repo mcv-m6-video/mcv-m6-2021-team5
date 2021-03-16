@@ -29,6 +29,7 @@ def denoise_mask(mask, method):
         return mask
 
     elif method==4:
+<<<<<<< HEAD
         mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3)))
         mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, cv2.getStructuringElement(cv2.MORPH_RECT, (9, 9)))
         return mask
@@ -44,3 +45,8 @@ def fg_segmentation_to_boxes(frame, i, box_min_size=(10, 10), cls='car'):
             detections.append([i, cls, 0, x, y, x + w, y + h])
 
     return detections
+=======
+        mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3)))
+        mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (9, 9)))
+        return mask
+>>>>>>> d2b495ceff2aca4e7eb475cc99754809423f5372

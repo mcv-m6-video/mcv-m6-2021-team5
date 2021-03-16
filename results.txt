@@ -1,0 +1,1 @@
+Experiment with alpha = 1 and rho = 0.01
