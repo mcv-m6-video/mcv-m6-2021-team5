@@ -11,6 +11,7 @@ import math
 f = open("results.txt", "w")
 
 from bgestimation.gaussian_estimation import GaussianBGEstimator
+from bgestimation.bgs_opencv import OpenCVBGEstimators
 from bgestimation.color_gaussian_estimation import ColorGaussianBGEstimator
 
 #Paths to images
@@ -52,22 +53,60 @@ def main():
 
     # Read GT
     reader = AnnotationReader(gt_path)
-    gt = reader.get_bboxes_per_frame(classes=['car'])
+    gt = reader.get_bboxes_per_frame(classes=['car','bike'])
 
     # Keep only 75% of the BB GT
+    # Ignore some static cars
     bb_gt = []
-    #for frame in gt.keys():
-    # for frame in range(gestimator.N_test_start, gestimator.N_test_end):
-    #     bb_gt.append(gt[frame])
-    for frame in range(color_gestimator.N_test_start, color_gestimator.N_test_end):
-        bb_gt.append(gt[frame])
+    ignore_ids=[0,1,2,3,4,5,6,7,8]
+    for frame in range(start, end):
+        boxes = []
+        for box in gt[frame]:
+            if box.id not in ignore_ids:
+                box.label = 'car'
+                boxes.append(box)
+        bb_gt.append(boxes)
+
+    print('\n\n------------------- Task 1: Gaussian models -------------------')
+    """
+    # Create gray model
+    gestimator = GaussianBGEstimator(img_path, mask_path)
+    gestimator.load_pretrained('models/gaussian.pkl')
+
+    # Create color model
+    color_gestimator = ColorGaussianBGEstimator(img_path, mask_path)
+    color_gestimator.load_pretrained('models/rgb_independent.pkl')
     
     map, _, _ = mean_average_precision(bb_gt, bb_ge)
     print('Gaussian estimator mAP: ' + str(map))
 
     map, _, _ = mean_average_precision(bb_gt, bb_gea)
-    print('Gaussian Adaptive estimator mAP: ' + str(map))
+    print('Gaussian gray Adaptive estimator mAP: ' + str(map))
 
+    map, _, _ = mean_average_precision(bb_gt, bb_ge_color)
+    print('Gaussian color estimator mAP: ' + str(map))
+
+    map, _, _ = mean_average_precision(bb_gt, bb_gea_color)
+    print('Gaussian color Adaptive estimator mAP: ' + str(map))
+    """
+
+    print('\n\n------------------- Task 2: State of the art evaluation -------------------')
+    # State of the art evaluation
+    ocv_estimators = OpenCVBGEstimators(img_path, train_ratio=0.25)
+    ocv_estimators.train(models=['MOG2', 'KNN'])
+
+    bb_ocv_mog = ocv_estimators.test(model='MOG2',N_test_start = start, N_test_end = end)
+    map, _, _ = mean_average_precision(bb_gt, bb_ocv_mog)
+    print('OCV bg subtraction MOG mAP: ' + str(map))  
+
+    bb_ocv_knn = ocv_estimators.test(model='KNN',N_test_start = start, N_test_end = end)
+    map, _, _ = mean_average_precision(bb_gt, bb_ocv_knn)
+    print('OCV bg subtraction KNN mAP: ' + str(map))  
+
+
+
+    
+    ## Parameter tuning
     # alphas = [1, 1.5, 2, 2.5,  3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5, 7, 7.5, 8, 8.5, 9, 9.5, 10, 10.5, 11]
     # rhos = [0.01, 0.02, 0.05, 0.1, 0.12, 0.15, 0.2, 0.22, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5]
 
