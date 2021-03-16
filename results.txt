@@ -1,6 +1,1 @@
-
-
-------------------- Initialization -------------------
-Experiment with alpha = 2 and rho = 0.0
-Testing estimator:
-[1/1] Computing foreground masks for testing frames [535-2141]:
+Experiment with alpha = 1 and rho = 0.01

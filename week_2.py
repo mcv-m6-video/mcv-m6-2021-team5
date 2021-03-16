@@ -8,7 +8,7 @@ import cv2
 import numpy as np
 import math 
 
-f = open("results.txt", "a")
+f = open("results.txt", "w")
 
 from bgestimation.gaussian_estimation import GaussianBGEstimator
 
@@ -56,7 +56,9 @@ def main():
 
     for alpha in alphas:
         for rho in rhos:
-            print("Experiment with alpha = " + str(alpha) + " and rho = " + str(rho), file = f)
+            print("Experiment with alpha = " + str(alpha) + " and rho = " + str(rho))
+            string = "Experiment with alpha = " + str(alpha) + " and rho = " + str(rho)
+            f.write(string)
             mask_path_new = 'datasets/aicity/AICity_data/train/S03/c010/masks' + '_' + str(alpha) + '_' + str(rho) + '/'
             gestimator.create_mask_path(mask_path_new)
             # bb_ge = gestimator.test(alpha=alpha, vis=True, N_test_start = start, N_test_end = end)
@@ -66,10 +68,14 @@ def main():
 
             # Evaluate
             map, _, _ = mean_average_precision(bb_gt, bb_ge)
-            print('Gaussian estimator mAP: ' + str(map), file=f)
+            print('Gaussian estimator mAP: ' + str(map))
+            string = 'Gaussian estimator mAP: ' + str(map)
+            f.write(string)
 
             map, _, _ = mean_average_precision(bb_gt, bb_gea)
-            print('Gaussian Adaptive estimator mAP: ' + str(map), file=f)
+            print('Gaussian Adaptive estimator mAP: ' + str(map))
+            string = 'Gaussian Adaptive estimator mAP: ' + str(map)
+            f.write(string)
 
     
 main()
