@@ -21,7 +21,7 @@ class GaussianBGEstimator:
         mask_path: path to output masks directory
         train_ratio: percentage of frames to use as train set
     """
-    def __init__(self, img_path, mask_path, train_ratio=0.25, n_components=10, GMM_threshold=0.8, GMM_alpha=0.1):
+    def __init__(self, img_path, mask_path, train_ratio=0.25, n_components=10, GMM_threshold=0.8, GMM_alpha=0.01):
         self.img_path = img_path
         self.mask_path = mask_path
 
@@ -428,7 +428,7 @@ class GaussianBGEstimator:
             #Classify Gaussians as backround and foreground
             sum_w = self.GMM_weights[0]
             for k in range(1,self.n_components):
-                if sum_w >self.GMM_threshold:
+                if sum_w > self.GMM_threshold:
                     break
                 sum_w += self.GMM_weights[k]
             
@@ -437,7 +437,7 @@ class GaussianBGEstimator:
             for i in range(k):
                 background_mask = background_mask + masks[i]
             #foreground_mask = (1 - background_mask).astype(np.uint8)  # Convert to an unsigned byte
-            foreground_mask = background_mask
+            foreground_mask = background_mask.astype(np.uint8)
             foreground_mask*=255
 
             foreground_mask_denoised = denoise_mask(foreground_mask, method=2)

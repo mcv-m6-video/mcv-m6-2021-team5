@@ -43,13 +43,10 @@ def main():
     # gestimator = GaussianBGEstimator(img_path, mask_path)
     # gestimator.load_pretrained('models/gaussian.pkl')
 
-    color_gestimator = ColorGaussianBGEstimator(img_path, mask_path, color_space='h')
-    color_gestimator.load_pretrained('models/h_independent.pkl')
-    #color_gestimator.train()
-    #color_gestimator.save_trained('models/h_independent.pkl')
-
-    bb_ge = color_gestimator.test(alpha=6, vis=True, N_test_end = 560)
-    bb_gea = color_gestimator.test_adaptive(alpha=6, vis=True, N_test_end = 560)
+    # color_gestimator = ColorGaussianBGEstimator(img_path, mask_path, color_space='h')
+    # color_gestimator.load_pretrained('models/h_independent.pkl')
+    # #color_gestimator.train()
+    # #color_gestimator.save_trained('models/h_independent.pkl')
 
     # Read GT
     reader = AnnotationReader(gt_path)
@@ -68,40 +65,43 @@ def main():
         bb_gt.append(boxes)
 
     print('\n\n------------------- Task 1: Gaussian models -------------------')
-    """
+    
     # Create gray model
-    gestimator = GaussianBGEstimator(img_path, mask_path)
-    gestimator.load_pretrained('models/gaussian.pkl')
+    # gestimator = GaussianBGEstimator(img_path, mask_path)
+    # gestimator.load_pretrained('models/gaussian.pkl')
 
     # Create color model
-    color_gestimator = ColorGaussianBGEstimator(img_path, mask_path)
+    color_gestimator = ColorGaussianBGEstimator(img_path, mask_path, color_space='rgb')
     color_gestimator.load_pretrained('models/rgb_independent.pkl')
-    
-    map, _, _ = mean_average_precision(bb_gt, bb_ge)
-    print('Gaussian estimator mAP: ' + str(map))
+    bb_ge_color = color_gestimator.test(alpha=6, vis=True, N_test_end = 560)
+    # bb_gea_color = color_gestimator.test_adaptive(alpha=6, vis=True, N_test_end = 560)
 
-    map, _, _ = mean_average_precision(bb_gt, bb_gea)
-    print('Gaussian gray Adaptive estimator mAP: ' + str(map))
+    
+    # map, _, _ = mean_average_precision(bb_gt, bb_ge)
+    # print('Gaussian estimator mAP: ' + str(map))
+
+    # map, _, _ = mean_average_precision(bb_gt, bb_gea)
+    # print('Gaussian gray Adaptive estimator mAP: ' + str(map))
 
     map, _, _ = mean_average_precision(bb_gt, bb_ge_color)
     print('Gaussian color estimator mAP: ' + str(map))
 
-    map, _, _ = mean_average_precision(bb_gt, bb_gea_color)
-    print('Gaussian color Adaptive estimator mAP: ' + str(map))
-    """
+    # map, _, _ = mean_average_precision(bb_gt, bb_gea_color)
+    # print('Gaussian color Adaptive estimator mAP: ' + str(map))
+    
 
-    print('\n\n------------------- Task 2: State of the art evaluation -------------------')
-    # State of the art evaluation
-    ocv_estimators = OpenCVBGEstimators(img_path, train_ratio=0.25)
-    ocv_estimators.train(models=['MOG2', 'KNN'])
+    # print('\n\n------------------- Task 2: State of the art evaluation -------------------')
+    # # State of the art evaluation
+    # ocv_estimators = OpenCVBGEstimators(img_path, train_ratio=0.25)
+    # ocv_estimators.train(models=['MOG2', 'KNN'])
 
-    bb_ocv_mog = ocv_estimators.test(model='MOG2',N_test_start = start, N_test_end = end)
-    map, _, _ = mean_average_precision(bb_gt, bb_ocv_mog)
-    print('OCV bg subtraction MOG mAP: ' + str(map))  
+    # bb_ocv_mog = ocv_estimators.test(model='MOG2',N_test_start = start, N_test_end = end)
+    # map, _, _ = mean_average_precision(bb_gt, bb_ocv_mog)
+    # print('OCV bg subtraction MOG mAP: ' + str(map))  
 
-    bb_ocv_knn = ocv_estimators.test(model='KNN',N_test_start = start, N_test_end = end)
-    map, _, _ = mean_average_precision(bb_gt, bb_ocv_knn)
-    print('OCV bg subtraction KNN mAP: ' + str(map))  
+    # bb_ocv_knn = ocv_estimators.test(model='KNN',N_test_start = start, N_test_end = end)
+    # map, _, _ = mean_average_precision(bb_gt, bb_ocv_knn)
+    # print('OCV bg subtraction KNN mAP: ' + str(map))  
 
 
 
@@ -135,13 +135,12 @@ def main():
 
     # f.close()
 
-            #print('Initialize GMM:')
-            #gestimator = GaussianBGEstimator(img_path, mask_path, train_ratio=0.005, n_components=15   )
-            #gestimator.init_GMM()
-            #print(gestimator.GMM_weights)
+    # print('Initialize GMM:')
+    # gestimator = GaussianBGEstimator(img_path, mask_path, train_ratio=0.001, n_components=20, GMM_threshold=0.95)
+    # gestimator.init_GMM()
 
-            #print('Test GMM:')
-            #bb_gmm = gestimator.test_GMM(vis=True, N_test_start = 535, N_test_end = 560)
+    # print('Test GMM:')
+    # bb_gmm = gestimator.test_GMM(vis=True, N_test_start = 535, N_test_end = 560)
 
     
 main()
