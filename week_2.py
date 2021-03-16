@@ -36,9 +36,20 @@ def task1_1(train, val, gt):
 
 def main():
 
-    # Parameters
-    start = 535
-    end = 2141
+    ## TASKS 1-2
+    print('\n\n------------------- Initialization -------------------')
+    
+    # Create model and infer the results
+    # gestimator = GaussianBGEstimator(img_path, mask_path)
+    # gestimator.load_pretrained('models/gaussian.pkl')
+
+    color_gestimator = ColorGaussianBGEstimator(img_path, mask_path, color_space='h')
+    color_gestimator.load_pretrained('models/h_independent.pkl')
+    #color_gestimator.train()
+    #color_gestimator.save_trained('models/h_independent.pkl')
+
+    bb_ge = color_gestimator.test(alpha=6, vis=True, N_test_end = 560)
+    bb_gea = color_gestimator.test_adaptive(alpha=6, vis=True, N_test_end = 560)
 
     # Read GT
     reader = AnnotationReader(gt_path)
