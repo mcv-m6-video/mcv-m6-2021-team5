@@ -182,8 +182,6 @@ Thumbs.db #thumbnail cache on Windows
 !.vscode/extensions.json
 *.code-workspace
 
-MOG/*
-GMG/*
-CNT/*
+IMAGES/*
 
 # End of https://www.toptal.com/developers/gitignore/api/python,jupyternotebooks,vscode,opencv

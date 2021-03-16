@@ -29,17 +29,15 @@ class OpenCVBGEstimators:
         self.N_test_start = self.N_train
         self.N_test_end = len(self.img_list)
     
-    def train(self, models=['MOG']):
+    def train(self, models=['MOG2']):
         
         # Create models 
         self.models = {}
         for model in models:
-            if model == 'MOG':
-                self.models[model] = cv2.bgsegm.createBackgroundSubtractorMOG()
-            elif model == 'GMG':
-                self.models[model] = cv2.bgsegm.createBackgroundSubtractorGMG()
-            elif model == 'CNT':
-                self.models[model] = cv2.bgsegm.createBackgroundSubtractorCNT()
+            if model == 'MOG2':
+                self.models[model] = cv2.createBackgroundSubtractorMOG2()
+            elif model == 'KNN':
+                self.models[model] = cv2.createBackgroundSubtractorKNN()
             else:
                 print('Invalid model name!')
                 return
@@ -52,7 +50,7 @@ class OpenCVBGEstimators:
                 self.models[model].apply(img)
 
 
-    def test(self, model='MOG', N_test_start=None, N_test_end=None):
+    def test(self, model='MOG2', N_test_start=None, N_test_end=None):
         """
         Tests the opencv background subtraction model for all the test images.
         Returns:
@@ -75,27 +73,25 @@ class OpenCVBGEstimators:
 
             # Create a mask with foreground pixels
             foreground_mask = self.models[model].apply(img)
-        
+
             # Filter
-            foreground_mask
+            _, foreground_mask = cv2.threshold(foreground_mask, 200, 255, cv2.THRESH_BINARY)
+            foreground_mask = denoise_mask(foreground_mask,method=4)
 
             # Obtain detections
             img = cv2.bitwise_and(img,img,mask=255-foreground_mask)
-            contours, _, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+            contours, _ = cv2.findContours(foreground_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
             frame_dets = []
             j = 1
             for con in contours:
                 (x, y, w, h) = cv2.boundingRect(con)
-                if w > 20 and h > 10 and w*h > 50:
+                if w > 20 and h > 10 and w*h > 450 and w < 4*h and h < 4*w: #and w*h < 5E5:
                     frame_dets.append(BB(int(frame_num), None, 'car', x, y, x+w, y+h, 1))
                     cv2.rectangle(img,(x,y),(x+w,y+h),(0,255,0),3)
                     j = j+1
             detections.append(frame_dets)
             
-            plt.imshow(img)
-            plt.show()
-
-            cv2.imwrite('./'+model+'/'+frame_name+'.png',img)
+            #cv2.imwrite('./IMAGES/'+model+'/'+frame_name+'.png',img)
         
         return detections
 
