@@ -44,6 +44,10 @@ class ColorGaussianBGEstimator:
 
         if self.color_space == 'rgb':
             self.n_channels = 3
+        if self.color_space == 'crcb':
+            self.n_channels = 2
+        if self.color_space == 'hs':
+            self.n_channels = 2
 
     def load_pretrained(self, filename):
         with open(filename, 'rb') as f:
@@ -68,9 +72,9 @@ class ColorGaussianBGEstimator:
         self.im_h = h     
 
         # Two pass method: first compute mean then std
-        print('[1/2] Computing mean for training frames [' + str(self.N_test_start) + '-' + str(self.N_test_end) + ']:')
+        print('[1/2] Computing mean for training frames [' + str(0) + '-' + str(self.N_test_start) + ']:')
         
-        if independent:
+        if self.independent:
             self.mean_px = np.zeros((w,h,3))
             self.std_px = np.zeros((w,h,3))
 
@@ -80,7 +84,7 @@ class ColorGaussianBGEstimator:
             self.mean_px /= self.N_train
 
         print('[2/2] Computing std for training frames (' + str(np.shape(self.img_list[0:self.N_train])[0]) + '/' + str(np.shape(self.img_list)[0]) + '):')
-        if independent:
+        if self.independent:
             for filename in tqdm(self.img_list[0:self.N_train]):
                 img = cv2.imread(filename, cv2.IMREAD_COLOR)
                 self.std_px += (img - self.mean_px) * (img - self.mean_px)
@@ -89,7 +93,7 @@ class ColorGaussianBGEstimator:
 
         return self.mean_px, self.std_px   
 
-    def test(self, alpha=1.75, vis=False, N_test_start=None, N_test_end=None):
+    def test(self, alpha=6, vis=False, N_test_start=None, N_test_end=None):
         """
         Test the computed model
         Params:
@@ -117,49 +121,58 @@ class ColorGaussianBGEstimator:
             frame_name = os.path.split(filename)[1].split(".")[0]
             frame_num = frame_name.split("_")[1]
 
-            if independent:
+            if self.independent:
                 # Create a mask with foreground pixels from each chan
                 foreground_masks = (img-self.mean_px > alpha*(self.std_px + 2))
                 
                 # Merge the masks from the different channels
-                foreground_masks = np.zeros((self.im_w,self.im_h), dtype=bool)
-                for i in range(self.n_channels)
-                    foreground_mask = np.logical_or(foreground_mask, foreground_masks[i])
-                foreground_masks = foreground_masks.astype(np.uint8)  # Convert to an unsigned byte
-                foreground_masks*=255
+                foreground_mask = np.zeros((self.im_w,self.im_h), dtype=bool)
+                for i in range(self.n_channels):
+                    foreground_mask = np.logical_or(foreground_mask, foreground_masks[:,:,i])
+                foreground_mask = foreground_mask.astype(np.uint8)  # Convert to an unsigned byte
+                foreground_mask*=255
 
             # Denoise mask
-            #foreground_mask_denoised_1 = denoise_mask(foreground_mask, method=1)
-            foreground_mask_denoised_2 = denoise_mask(foreground_mask, method=2)
+            foreground_mask_denoised = denoise_mask(foreground_mask, method=3)
 
             # Save masks
             if vis:
                 cv2.imwrite(self.mask_path + 'mask_' + str(frame_name) + '_raw.png', foreground_mask)
-                #cv2.imwrite(self.mask_path + 'mask_' + str(frame_name) + '_denoised_1.png', foreground_mask_denoised_1)
-                cv2.imwrite(self.mask_path + 'mask_' + str(frame_name) + '_denoised.png', foreground_mask_denoised_2)
+                cv2.imwrite(self.mask_path + 'mask_' + str(frame_name) + '_denoised.png', foreground_mask_denoised)
                 
-            # Get the number of connected components
-            #output_0 = cv2.connectedComponentsWithStats(foreground_mask)
-            #output_1 = cv2.connectedComponentsWithStats(foreground_mask_denoised_1)
-            output_2 = cv2.connectedComponentsWithStats(foreground_mask_denoised_2)
+            # # Method 1: connected components
+            # output = cv2.connectedComponentsWithStats(foreground_mask_denoised)
+            # (numLabels, _, stats, _) = output
 
-            (numLabels, _, stats, _) = output_2
-
-            # Obtain bounding boxes
+            # # Obtain bounding boxes
+            # frame_dets = []
+            # foreground_mask_bbs = np.zeros(np.shape(foreground_mask))
+            # for i in range(1, numLabels):
+            #     x = stats[i, cv2.CC_STAT_LEFT]
+            #     y = stats[i, cv2.CC_STAT_TOP]
+            #     w = stats[i, cv2.CC_STAT_WIDTH]
+            #     h = stats[i, cv2.CC_STAT_HEIGHT]
+            #     if w > 20 and h > 10:
+            #         frame_dets.append( BB(int(frame_num), i, 'car', x, y, x+w, y+h, 1) )
+            # detections.append(frame_dets)
+            
+            #Method 2: find contours
+            contours, _ = cv2.findContours(foreground_mask_denoised, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
             frame_dets = []
-            for i in range(1,numLabels):
-                x = stats[i, cv2.CC_STAT_LEFT]
-                y = stats[i, cv2.CC_STAT_TOP]
-                w = stats[i, cv2.CC_STAT_WIDTH]
-                h = stats[i, cv2.CC_STAT_HEIGHT]
-                frame_dets.append( BB(int(frame_num), i, 'car', x, y, x+w, y+h, 1) )
+            foreground_mask_bbs = np.zeros(np.shape(foreground_mask))
+            j = 1
+            for con in contours:
+                (x, y, w, h) = cv2.boundingRect(con)
+                if w > 20 and h > 10:
+                    frame_dets.append(BB(int(frame_num), None, 'car', x, y, x+w, y+h, 1))
+                    j = j+1
             detections.append(frame_dets)
-        
+
             # if vis:
             #     plot_detections(frame_dets)
         return detections
 
-    def test_adaptive(self, alpha=1.75, rho=0.9, vis=False, N_test_start=None, N_test_end=None):
+    def test_adaptive(self, alpha=3, rho=0.01, vis=False, N_test_start=None, N_test_end=None):
         """
         Test the computed model using the adaptive method
         Params:
@@ -194,32 +207,55 @@ class ColorGaussianBGEstimator:
 
             foreground_mask_denoised = denoise_mask(foreground_mask, method=2)
 
+            # # Method 1: connected components
+            # output = cv2.connectedComponentsWithStats(foreground_mask_denoised)
+            # (numLabels, _, stats, _) = output
+
+            # # Obtain bounding boxes
+            # frame_dets = []
+            # foreground_mask_bbs = np.zeros(np.shape(foreground_mask))
+            # for i in range(1, numLabels):
+            #     x = stats[i, cv2.CC_STAT_LEFT]
+            #     y = stats[i, cv2.CC_STAT_TOP]
+            #     w = stats[i, cv2.CC_STAT_WIDTH]
+            #     h = stats[i, cv2.CC_STAT_HEIGHT]
+            #     if w > 20 and h > 10:
+            #         frame_dets.append( BB(int(frame_num), i, 'car', x, y, x+w, y+h, 1) )
+            #     cv2.rectangle(foreground_mask_bbs,(x,y),(x+w,y+h),(255,255,255),-1)
+            # detections.append(frame_dets)
+            
+            #Method 2: find contours
+            contours, _ = cv2.findContours(foreground_mask_denoised, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+            frame_dets = []
+            foreground_mask_bbs = np.zeros(np.shape(foreground_mask))
+            j = 1
+            for con in contours:
+                (x, y, w, h) = cv2.boundingRect(con)
+                if w > 20 and h > 10:
+                    frame_dets.append(BB(int(frame_num), None, 'car', x, y, x+w, y+h, 1))
+                    j = j+1
+                cv2.rectangle(foreground_mask_bbs,(x, y),(x + w, y + h),(255,255,255),-1)
+            detections.append(frame_dets)       
             # Save masks
             if vis:
                 cv2.imwrite(self.mask_path + 'mask_' + str(frame_name) + '_raw_ad.png', foreground_mask)
-                #cv2.imwrite(self.mask_path + 'mask_' + str(frame_name) + '_denoised_1.png', foreground_mask_denoised_1)
                 cv2.imwrite(self.mask_path + 'mask_' + str(frame_name) + '_denoised_ad.png', foreground_mask_denoised)
-             
-        
-            # Get the number of connected components
-            output = cv2.connectedComponentsWithStats(foreground_mask_denoised)
-            (numLabels, _, stats, _) = output
+                cv2.imwrite(self.mask_path + 'mask_' + str(frame_name) + '_denoised_bbs_ad.png', foreground_mask_bbs)
 
-            frame_dets = []
-            for i in range(1,numLabels):
-                x = stats[i, cv2.CC_STAT_LEFT]
-                y = stats[i, cv2.CC_STAT_TOP]
-                w = stats[i, cv2.CC_STAT_WIDTH]
-                h = stats[i, cv2.CC_STAT_HEIGHT]
-                frame_dets.append( BB(int(frame_num), i, 'car', x, y, x+w, y+h, 1) )
-            detections.append(frame_dets)
+            # Convert mask to boolean
+            foreground_mask_bbs = foreground_mask_bbs > 0
+
+            # print(foreground_mask_bbs)
 
             # if vis:
             #     plot_detections(frame_dets)
 
             # Update model
-            fg_pixels = foreground_mask==1
-            bg_pixels = foreground_mask==0
+            fg_pixels = foreground_mask_denoised==True
+            bg_pixels = foreground_mask_denoised==False
+            fg_pixels = fg_pixels.astype(np.uint8)
+            bg_pixels = bg_pixels.astype(np.uint8)
+
             #fg_pixels = foreground_mask_denoised==1
             #bg_pixels = foreground_mask_denoised==0
 
