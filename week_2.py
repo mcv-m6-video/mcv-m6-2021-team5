@@ -57,7 +57,7 @@ def main():
         bb_gt.append(boxes)
 
     print('\n\n------------------- Task 1: Gaussian models -------------------')
-    
+    """
     # Create gray model
     gestimator = GaussianBGEstimator(img_path, mask_path)
     gestimator.load_pretrained('models/gaussian.pkl')
@@ -87,12 +87,12 @@ def main():
 
     map, _, _ = mean_average_precision(bb_gt, bb_gea_color)
     print('Gaussian color Adaptive estimator mAP: ' + str(map))
-
+    """
 
     print('\n\n------------------- Task 2: State of the art evaluation -------------------')
     # State of the art evaluation
     ocv_estimators = OpenCVBGEstimators(img_path, train_ratio=0.25)
-    ocv_estimators.train(models['MOG2', 'KNN'])
+    ocv_estimators.train(models=['MOG2', 'KNN'])
 
     bb_ocv_mog = ocv_estimators.test(model='MOG2',N_test_start = start, N_test_end = end)
     map, _, _ = mean_average_precision(bb_gt, bb_ocv_mog)
