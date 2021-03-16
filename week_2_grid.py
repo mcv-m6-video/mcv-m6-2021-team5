@@ -36,7 +36,7 @@ def main():
 
     # Parameters
     start = 535
-    end = 575
+    end = 545
 
     # Read GT
     reader = AnnotationReader(gt_path)
@@ -56,9 +56,11 @@ def main():
 
     
     # Parameter tuning
-    alphas = [1, 3, 5, 7, 9]
-    rhos = [0.0005, 0.05, 0.1, 0.5]
+    alphas = [3, 5, 7, 9]
+    rhos = [0.0005, 0.01, 0.025, 0.05, 0.1, 0.3, 0.5]
 
+    mAps_adaptive = []
+    mAps_gaussian = []
     for alpha in alphas:
         for rho in rhos:
             print("Experiment with alpha = " + str(alpha) + " and rho = " + str(rho))
@@ -71,8 +73,9 @@ def main():
             bb_gea = gestimator.test_adaptive(alpha=alpha, rho=rho, vis=True, N_test_start = start, N_test_end = end)
 
             # Evaluate
-            map, _, _ = mean_average_precision(bb_gt, bb_gea)
+            map, _, _ = mean_average_precision(bb_gt, bb_gea, method = 'area')
             print('Gaussian Adaptive estimator mAP: ' + str(map))
+            mAps_adaptive.append(map)
         
         # Create gray model
         gestimator = GaussianBGEstimator(img_path, mask_path)
@@ -82,8 +85,13 @@ def main():
         bb_ge = gestimator.test(alpha=alpha, vis=True, N_test_start = start, N_test_end = end)
 
         # Evaluate
-        map, _, _ = mean_average_precision(bb_gt, bb_ge)
+        map, _, _ = mean_average_precision(bb_gt, bb_ge, method = 'area')
         print('Gaussian estimator mAP: ' + str(map))
+        mAps_gaussian.append(map)
+
+    print(mAps_adaptive)
+    print(mAps_gaussian)
+
 
     """
     print('\n\n------------------- Task 1: Gaussian models -------------------')

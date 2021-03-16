@@ -262,8 +262,8 @@ class GaussianBGEstimator:
             foreground_mask_bbs = foreground_mask_bbs > 0
 
             # Update model
-            fg_pixels = foreground_mask_denoised==True
-            bg_pixels = foreground_mask_denoised==False
+            fg_pixels = foreground_mask_bbs==True
+            bg_pixels = foreground_mask_bbs==False
             fg_pixels = fg_pixels.astype(np.uint8)
             bg_pixels = bg_pixels.astype(np.uint8)
 
