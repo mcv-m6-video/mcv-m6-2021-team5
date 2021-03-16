@@ -1,7 +1,7 @@
 import numpy as np
 from .iou import iou_vectorized
 
-def mean_average_precision(gt_list, pred_list, confidence_score=True, classes=["car"]):
+def mean_average_precision(gt_list, pred_list, method="score", classes=["car"]):
     """
     Mean Average Precision calculation
     Parameters:
@@ -17,7 +17,7 @@ def mean_average_precision(gt_list, pred_list, confidence_score=True, classes=["
     for c in classes:
         gt_list_class = [[det for det in boxlist if det.label == c] for boxlist in gt_list]
         pred_list_class = [[det for det in boxlist if det.label == c] for boxlist in pred_list]
-        ap, prec, rec = average_precision(gt_list_class, pred_list_class, confidence_score)
+        ap, prec, rec = average_precision(gt_list_class, pred_list_class, method=method)
         precs.append(prec)
         recs.append(rec)
         aps.append(ap)
@@ -28,7 +28,7 @@ def mean_average_precision(gt_list, pred_list, confidence_score=True, classes=["
     return map, prec, rec
 
 
-def average_precision(gt_list, pred_list, confidence_score=True):
+def average_precision(gt_list, pred_list, method="score"):
     """
     Average Precision with or without confidence scores.
     Params:
@@ -40,8 +40,12 @@ def average_precision(gt_list, pred_list, confidence_score=True):
     if len(pred_list) == 0:
         return 0
 
-    if confidence_score :
+    if method == "score" :
         sorted_ind = np.argsort([-det[1].score for det in pred_list])
+        pred_list_sorted = [pred_list[i] for i in sorted_ind]
+        ap, prec, rec = voc_ap(gt_list, pred_list_sorted)
+    elif method == "area":
+        sorted_ind = np.argsort([-det[1].area for det in pred_list])
         pred_list_sorted = [pred_list[i] for i in sorted_ind]
         ap, prec, rec = voc_ap(gt_list, pred_list_sorted)
     else:

@@ -203,7 +203,7 @@ class GaussianBGEstimator:
             #     plot_detections(frame_dets)
         return detections
 
-    def test_adaptive(self, alpha=3, rho=0.01, vis=False, N_test_start=None, N_test_end=None):
+    def test_adaptive(self, alpha=6, rho=0.05, vis=True, N_test_start=None, N_test_end=None):
         """
         Test the computed model using the adaptive method
         Params:
@@ -224,6 +224,7 @@ class GaussianBGEstimator:
         # For all the images to test
         detections = []
         print('[1/1] Computing foreground masks for testing frames [' + str(self.N_test_start) + '-' + str(self.N_test_end) + ']:')
+        plot_iter = 0
         for filename in tqdm(self.img_list[self.N_test_start:self.N_test_end]):
             
             # Read image
@@ -237,23 +238,7 @@ class GaussianBGEstimator:
             foreground_mask*=255
 
             foreground_mask_denoised = denoise_mask(foreground_mask, method=3)
-        
-            # # Method 1: connected components
-            # output = cv2.connectedComponentsWithStats(foreground_mask_denoised)
-            # (numLabels, _, stats, _) = output
-
-            # # Obtain bounding boxes
-            # frame_dets = []
-            # foreground_mask_bbs = np.zeros(np.shape(foreground_mask))
-            # for i in range(1, numLabels):
-            #     x = stats[i, cv2.CC_STAT_LEFT]
-            #     y = stats[i, cv2.CC_STAT_TOP]
-            #     w = stats[i, cv2.CC_STAT_WIDTH]
-            #     h = stats[i, cv2.CC_STAT_HEIGHT]
-            #     if w > 20 and h > 10:
-            #         frame_dets.append( BB(int(frame_num), i, 'car', x, y, x+w, y+h, 1) )
-            #     cv2.rectangle(foreground_mask_bbs,(x,y),(x+w,y+h),(255,255,255),-1)
-            # detections.append(frame_dets)
+    
             
             #Method 2: find contours
             contours, _ = cv2.findContours(foreground_mask_denoised, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
@@ -262,33 +247,26 @@ class GaussianBGEstimator:
             j = 1
             for con in contours:
                 (x, y, w, h) = cv2.boundingRect(con)
-                if w > 20 and h > 10:
+                if w > 20 and h > 10 and w*h > 550 and w < 3.5*h and h < 3.5*w and w*h < 5E5:
                     frame_dets.append(BB(int(frame_num), None, 'car', x, y, x+w, y+h, 1))
                     j = j+1
                 cv2.rectangle(foreground_mask_bbs,(x, y),(x + w, y + h),(255,255,255),-1)
             detections.append(frame_dets)       
             # Save masks
-            if vis:
+            if vis and plot_iter%10==0:
                 cv2.imwrite(self.mask_path + 'mask_' + str(frame_name) + '_raw_ad.png', foreground_mask)
                 cv2.imwrite(self.mask_path + 'mask_' + str(frame_name) + '_denoised_ad.png', foreground_mask_denoised)
                 cv2.imwrite(self.mask_path + 'mask_' + str(frame_name) + '_denoised_bbs_ad.png', foreground_mask_bbs)
-
+            plot_iter = plot_iter + 1
             # Convert mask to boolean
             foreground_mask_bbs = foreground_mask_bbs > 0
 
-            # print(foreground_mask_bbs)
-
-            # if vis:
-            #     plot_detections(frame_dets)
-
             # Update model
-            fg_pixels = foreground_mask_denoised==True
-            bg_pixels = foreground_mask_denoised==False
+            fg_pixels = foreground_mask_bbs==True
+            bg_pixels = foreground_mask_bbs==False
             fg_pixels = fg_pixels.astype(np.uint8)
             bg_pixels = bg_pixels.astype(np.uint8)
 
-            #fg_pixels = foreground_mask_denoised==1
-            #bg_pixels = foreground_mask_denoised==0
 
             image_pixels_bg = img*(bg_pixels)
             mean_pixels_bg = self.mean_px*(bg_pixels)
