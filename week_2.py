@@ -77,5 +77,7 @@ def main():
             string = 'Gaussian Adaptive estimator mAP: ' + str(map)
             f.write(string)
 
+    f.close()
+
     
 main()
