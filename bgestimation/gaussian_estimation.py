@@ -188,7 +188,7 @@ class GaussianBGEstimator:
             # detections.append(frame_dets)
             
             #Method 2: find contours
-            contours, _ = cv2.findContours(foreground_mask_denoised, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+            _, contours, _ = cv2.findContours(foreground_mask_denoised, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
             frame_dets = []
             foreground_mask_bbs = np.zeros(np.shape(foreground_mask))
             j = 1
@@ -256,7 +256,7 @@ class GaussianBGEstimator:
             # detections.append(frame_dets)
             
             #Method 2: find contours
-            contours, _ = cv2.findContours(foreground_mask_denoised, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+            _, contours, _ = cv2.findContours(foreground_mask_denoised, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
             frame_dets = []
             foreground_mask_bbs = np.zeros(np.shape(foreground_mask))
             j = 1
