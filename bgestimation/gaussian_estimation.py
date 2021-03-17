@@ -21,7 +21,7 @@ class GaussianBGEstimator:
         mask_path: path to output masks directory
         train_ratio: percentage of frames to use as train set
     """
-    def __init__(self, img_path, mask_path, train_ratio=0.25, n_components=10, GMM_threshold=0.8, GMM_alpha=0.1):
+    def __init__(self, img_path, mask_path, train_ratio=0.25, n_components=10, GMM_threshold=0.8, GMM_alpha=0.01):
         self.img_path = img_path
         self.mask_path = mask_path
 
@@ -256,17 +256,17 @@ class GaussianBGEstimator:
 
 
             # Save masks
-            if vis and plot_iter%10==0:
-                cv2.imwrite(self.mask_path + 'mask_' + str(frame_name) + '_raw_ad.png', foreground_mask)
-                cv2.imwrite(self.mask_path + 'mask_' + str(frame_name) + '_denoised_ad.png', foreground_mask_denoised)
-                cv2.imwrite(self.mask_path + 'mask_' + str(frame_name) + '_denoised_bbs_ad.png', foreground_mask_bbs)
+            #if vis and plot_iter%10==0:
+            cv2.imwrite(self.mask_path + 'mask_' + str(frame_name) + '_raw_ad.png', foreground_mask)
+            cv2.imwrite(self.mask_path + 'mask_' + str(frame_name) + '_denoised_ad.png', foreground_mask_denoised)
+            cv2.imwrite(self.mask_path + 'mask_' + str(frame_name) + '_denoised_bbs_ad.png', foreground_mask_bbs)
             plot_iter = plot_iter + 1
             # Convert mask to boolean
             foreground_mask_bbs = foreground_mask_bbs > 0
 
             # Update model
-            fg_pixels = foreground_mask_denoised==True
-            bg_pixels = foreground_mask_denoised==False
+            fg_pixels = foreground_mask_bbs==True
+            bg_pixels = foreground_mask_bbs==False
             fg_pixels = fg_pixels.astype(np.uint8)
             bg_pixels = bg_pixels.astype(np.uint8)
 
@@ -409,7 +409,7 @@ class GaussianBGEstimator:
             #Classify Gaussians as backround and foreground
             sum_w = self.GMM_weights[0]
             for k in range(1,self.n_components):
-                if sum_w >self.GMM_threshold:
+                if sum_w > self.GMM_threshold:
                     break
                 sum_w += self.GMM_weights[k]
             
@@ -418,7 +418,7 @@ class GaussianBGEstimator:
             for i in range(k):
                 background_mask = background_mask + masks[i]
             #foreground_mask = (1 - background_mask).astype(np.uint8)  # Convert to an unsigned byte
-            foreground_mask = background_mask
+            foreground_mask = background_mask.astype(np.uint8)
             foreground_mask*=255
 
             foreground_mask_denoised = denoise_mask(foreground_mask, method=2)
