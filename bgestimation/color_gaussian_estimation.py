@@ -98,7 +98,7 @@ class ColorGaussianBGEstimator:
                     img = cv2.cvtColor(img, self.color_flag)
                     if self.color_space == 'hs':
                         img = img[:,:,:2]
-                    if self.color_space == 'h':
+                    elif self.color_space == 'h':
                         img = img[:,:,0]
                         img = np.reshape(img, (self.im_w, self.im_h, 1))
                     else:
@@ -117,7 +117,7 @@ class ColorGaussianBGEstimator:
                     img = cv2.cvtColor(img, self.color_flag)
                     if self.color_space == 'hs':
                         img = img[:,:,:2]
-                    if self.color_space == 'h':
+                    elif self.color_space == 'h':
                         img = img[:,:,0]
                         img = np.reshape(img, (self.im_w, self.im_h, 1))
                     else:
@@ -162,7 +162,7 @@ class ColorGaussianBGEstimator:
                 img = cv2.cvtColor(img, self.color_flag)
                 if self.color_space == 'hs':
                     img = img[:,:,:2]
-                if self.color_space == 'h':
+                elif self.color_space == 'h':
                     img = img[:,:,0]
                     img = np.reshape(img, (self.im_w, self.im_h, 1))
                 else:
@@ -177,7 +177,7 @@ class ColorGaussianBGEstimator:
                     corrected_hue_diff = np.minimum(179-hue_diff, hue_diff) #Since Hue is in a circular space, the difference needs to be corrected
                     foreground_masks[:,:,0] = corrected_hue_diff > alpha*(self.std_px[:,:,0] + 2) 
 
-                if self.color_space == 'h':
+                elif self.color_space == 'h':
                     foreground_masks=np.zeros((self.im_w,self.im_h,1), dtype=bool)
                     hue_diff = abs(img[:,:,0]-self.mean_px[:,:,0])
                     corrected_hue_diff = np.minimum(179-hue_diff, hue_diff) #Since Hue is in a circular space, the difference needs to be corrected
@@ -266,23 +266,22 @@ class ColorGaussianBGEstimator:
                 img = cv2.cvtColor(img, self.color_flag)
                 if self.color_space == 'hs':
                     img = img[:,:,:2]
-                if self.color_space == 'h':
+                elif self.color_space == 'h':
                     img = img[:,:,0]
                     img = np.reshape(img, (self.im_w, self.im_h, 1))
                 else:
                     img = img[:,:,1:] #For color spaces Lab and YCrCb where we only want to keep the chrominance
-
             if self.color_space == 'hs':
                 foreground_masks=np.zeros((self.im_w,self.im_h,2), dtype=bool)
                 foreground_masks[:,:,1] = abs(img[:,:,1]-self.mean_px[:,:,1]) > alpha*(self.std_px[:,:,1] + 2)
                 hue_diff = abs(img[:,:,0]-self.mean_px[:,:,0])
                 corrected_hue_diff = np.minimum(179-hue_diff, hue_diff) #Since Hue is in a circular space, the difference needs to be corrected
                 foreground_masks[:,:,0] = corrected_hue_diff > alpha*(self.std_px[:,:,0] + 2) 
-            if self.color_space == 'h':
-                    foreground_masks=np.zeros((self.im_w,self.im_h,1), dtype=bool)
-                    hue_diff = abs(img[:,:,0]-self.mean_px[:,:,0])
-                    corrected_hue_diff = np.minimum(179-hue_diff, hue_diff) #Since Hue is in a circular space, the difference needs to be corrected
-                    foreground_masks[:,:,0] = corrected_hue_diff > alpha*(self.std_px[:,:,0] + 2) 
+            elif self.color_space == 'h':
+                foreground_masks=np.zeros((self.im_w,self.im_h,1), dtype=bool)
+                hue_diff = abs(img[:,:,0]-self.mean_px[:,:,0])
+                corrected_hue_diff = np.minimum(179-hue_diff, hue_diff) #Since Hue is in a circular space, the difference needs to be corrected
+                foreground_masks[:,:,0] = corrected_hue_diff > alpha*(self.std_px[:,:,0] + 2) 
             else:
                 foreground_masks = (abs(img-self.mean_px) > alpha*(self.std_px + 2))
          
