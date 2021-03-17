@@ -203,7 +203,7 @@ class GaussianBGEstimator:
             #     plot_detections(frame_dets)
         return detections
 
-    def test_adaptive(self, alpha=6, rho=0.05, vis=True, N_test_start=None, N_test_end=None):
+    def test_adaptive(self, alpha=6, rho=0.05, vis=False, N_test_start=None, N_test_end=None):
         """
         Test the computed model using the adaptive method
         Params:
@@ -245,13 +245,16 @@ class GaussianBGEstimator:
             frame_dets = []
             foreground_mask_bbs = np.zeros(np.shape(foreground_mask))
             j = 1
+
             for con in contours:
                 (x, y, w, h) = cv2.boundingRect(con)
                 if w > 20 and h > 10 and w*h > 550 and w < 3.5*h and h < 3.5*w and w*h < 5E5:
                     frame_dets.append(BB(int(frame_num), None, 'car', x, y, x+w, y+h, 1))
                     j = j+1
                 cv2.rectangle(foreground_mask_bbs,(x, y),(x + w, y + h),(255,255,255),-1)
-            detections.append(frame_dets)       
+            detections.append(frame_dets)
+
+
             # Save masks
             if vis and plot_iter%10==0:
                 cv2.imwrite(self.mask_path + 'mask_' + str(frame_name) + '_raw_ad.png', foreground_mask)

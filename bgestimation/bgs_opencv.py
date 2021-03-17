@@ -36,8 +36,24 @@ class OpenCVBGEstimators:
         for model in models:
             if model == 'MOG2':
                 self.models[model] = cv2.createBackgroundSubtractorMOG2()
+                print('Parameters for MOG2 model:')
+                print('History: ' + str(self.models[model].getHistory()))
+                print('NMixtures: ' + str(self.models[model].getNMixtures()))
+                print('Shadow detection: Enabled')
             elif model == 'KNN':
                 self.models[model] = cv2.createBackgroundSubtractorKNN()
+                print('Parameters for KNN model:')
+                print('History: ' + str(self.models[model].getHistory()))
+                print('KNN samples: ' + str(self.models[model].getkNNSamples()))
+                print('Shadow detection: Enabled')
+            elif model == 'SG':
+                self.models[model] = cv2.createBackgroundSubtractorMOG2()
+                self.models[model].setNMixtures(1)
+                self.models[model].setDetectShadows(False)
+                print('Parameters for MOG2:')
+                print('History: ' + str(self.models[model].getHistory()))
+                print('NMixtures: ' + str(self.models[model].getNMixtures()))
+                print('Shadow detection: Disabled')
             else:
                 print('Invalid model name!')
                 return
@@ -91,7 +107,7 @@ class OpenCVBGEstimators:
                     j = j+1
             detections.append(frame_dets)
             
-            #cv2.imwrite('./IMAGES/'+model+'/'+frame_name+'.png',img)
+            cv2.imwrite('./IMAGES/'+model+'/'+frame_name+'.png',img)
         
         return detections
 
