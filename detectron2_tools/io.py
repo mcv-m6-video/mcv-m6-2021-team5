@@ -1,0 +1,124 @@
+from detectron2.structures import BoxMode
+from detectron2.structures import Instances, Boxes
+import xml.etree.ElementTree as ET
+import torch
+import os
+import math
+from utils.bb import BB
+
+class detectronReader():
+    def __init__(self, xmlfile):
+        # Parse XML file
+        tree = ET.parse(xmlfile) 
+        root = tree.getroot()
+        image_path = os.path.split(xmlfile)[0] + '/AICity_data/train/S03/c010/frames/'
+
+        # Read all the boxes from each track and sort by frame number
+        detections = []
+        for track in root[2:]:
+            for box in track:
+                det = [int(box.attrib['frame']),
+                        track.attrib['label'],
+                        int(track.attrib['id']),
+                        float(box.attrib['xtl']),
+                        float(box.attrib['ytl']),
+                        float(box.attrib['xbr']),
+                        float(box.attrib['ybr'])]
+                detections.append(det)
+        detections = sorted(detections, key=lambda x: x[0])
+
+        # Create a dict for every frame
+        self.dataset_dicts = []
+        last_frame = -1
+        for i, det in enumerate(detections):
+            # If frame has changed, restart record
+            if det[0] != last_frame or i==0:
+                if i != 0:
+                    self.dataset_dicts.append(record)
+                last_frame = det[0]
+                record = {}
+                record["file_name"] = image_path + 'frame_' + str(det[0]+1).zfill(4) + '.png'
+                record["image_id"] = det[0]
+                record["annotations"] = []
+                record["width"] = 1920
+                record["height"] = 1080
+
+            # Add box to annotations
+            if det[1]!='bike':
+                box = {}
+                box["bbox"] = det[3:7]
+                box["bbox_mode"] = BoxMode.XYXY_ABS
+                box["category_id"] = 0 if det[1] == 'car' else 1 #3 if det[1] == 'car' else 2
+                box["track"] = det[2]
+                record["annotations"].append(box)
+
+            if i==len(detections)-1:
+                self.dataset_dicts.append(record)
+
+
+
+    def get_dict_from_xml(self, mode, train_ratio=0.25, K=0):
+        """
+        Reads an input xml file and returns a 
+        detectron2 formatted list of dictionaries
+        """
+        if mode == 'train':
+            # Return first 25% of the data
+            return self.dataset_dicts[0:math.floor(len(self.dataset_dicts)*train_ratio)]
+        elif mode == 'val':
+            # Return last 75% of the data
+            return self.dataset_dicts[math.floor(len(self.dataset_dicts)*train_ratio):len(self.dataset_dicts)]
+        else:
+            print('Invalid mode: either train or val')
+
+def read_detections_file(filename):
+    output = []
+    with open(filename, 'r') as f:
+        detections = f.readlines()
+
+        # Create a dict for every frame
+        dataset_dicts = []
+        last_frame = -1
+        for i, det in enumerate(detections):
+            det = det.split(',')
+            # If frame has changed, restart record
+            if int(det[0]) != last_frame or i==0 or i==len(detections)-1:
+                if i != 0:
+                    record["instances"].set("pred_classes",torch.CharTensor(pred_classes))
+                    record["instances"].set("scores",torch.Tensor(scores))
+                    record["instances"].set("pred_boxes",Boxes(torch.Tensor(pred_boxes)))
+                    dataset_dicts.append(record)
+                last_frame = int(det[0])
+                record = {}
+                pred_boxes = []
+                pred_classes = []
+                scores = []
+                record["instances"] = Instances((1920,1080))
+
+            # Add box to instances
+            pred_boxes.append([float(det[2]),float(det[3]),float(det[2])+float(det[4]),float(det[3])+float(det[5])])
+            pred_classes.append(0)
+            scores.append(float(det[6]))
+        return dataset_dicts
+
+def detectron2converter(input_pred):
+    """
+    Convert the detectron2 prediction format
+    to ours to compute the mAP
+    """
+    
+    output_pred = []
+    for pred in input_pred:
+
+        pred_classes = pred["instances"].pred_classes.to("cpu")
+        pred_scores = pred["instances"].pred_scores.to("cpu")
+        pred_boxes = pred["instances"].pred_boxes.to("cpu")
+
+        box_list = []
+        for i in range(0, len(pred_classes)):
+            box = BB(i, 0, 'car', pred_boxes[i,0], pred_boxes[i,1], pred_boxes[i,2], pred_boxes[i,3], pred_scores[i])
+            box_list.append(box)
+
+        output_pred.append(box_list)
+
+    return output_pred
