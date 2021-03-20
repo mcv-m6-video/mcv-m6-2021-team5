@@ -76,7 +76,7 @@ def task_1_2():
         trainer.train()
 
         # Inference on the test dataset
-        test_dict = reader.get_dict_from_xml('test',K=k)
+        val_dict = reader.get_dict_from_xml('test',K=k)
 
         cfg.MODEL.WEIGHTS = os.path.join(cfg.OUTPUT_DIR, "model_final.pth")  # path to the model we just trained
         cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.5   # set a custom testing threshold
@@ -84,24 +84,24 @@ def task_1_2():
  
         # Predict
         predictions = []
-        for d in tqdm(test_dict):    
+        for d in tqdm(val_dict):    
             im = cv2.imread(d["file_name"])
             outputs = predictor(im) 
             predictions.append(outputs)
 
         # Get GT for evaluation
+        _, range_val = reader.get_range_for_k(k)
         bb_gt = []
-        for frame in range(start, end):
+        for frame in range_val:
             boxes = []
             for box in gt[frame]:
                 boxes.append(box)
             bb_gt.append(boxes)
 
-
         # Compute mAP metrics
         predictions = detectron2converter(predictions)
         map, _, _ = mean_average_precision(bb_gt, predictions, method='score')
-        print('Test mAP for k=' + str(k) + ': ' + str(map))
+        print('Validation mAP for k=' + str(k) + ': ' + str(map))
 
 
 def task_2():
