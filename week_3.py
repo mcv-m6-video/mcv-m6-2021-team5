@@ -3,7 +3,7 @@ import detectron2
 import numpy as np
 import os, cv2, random
 from matplotlib import pyplot as plt
-import tqdm
+from tqdm import tqdm
 
 from detectron2.utils.visualizer import Visualizer
 from detectron2.data import MetadataCatalog, DatasetCatalog
@@ -97,7 +97,7 @@ def task_1_2():
 
         # Read the dataset from the xml file
         train_dict = reader.get_dict_from_xml('train',K=k)
-        
+
         # Test if data is properly read
         for d in train_dict[0:1]:
             img = cv2.imread(d["file_name"])
@@ -116,7 +116,7 @@ def task_1_2():
         cfg.MODEL.WEIGHTS = model_zoo.get_checkpoint_url("COCO-Detection/faster_rcnn_X_101_32x8d_FPN_3x.yaml")
         cfg.SOLVER.IMS_PER_BATCH = 2
         cfg.SOLVER.BASE_LR = 0.00025  
-        cfg.SOLVER.MAX_ITER = 21  
+        cfg.SOLVER.MAX_ITER = 2  # TODO: Just for testing
         cfg.SOLVER.STEPS = []        
         cfg.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE = 128   
         cfg.MODEL.ROI_HEADS.NUM_CLASSES = 1 
@@ -129,7 +129,7 @@ def task_1_2():
 
         # Inference on the test dataset
         val_dict = reader.get_dict_from_xml('val', K=k)
-
+        
         cfg.MODEL.WEIGHTS = os.path.join(cfg.OUTPUT_DIR, "model_final.pth")  # path to the model we just trained
         cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.5   # set a custom testing threshold
         predictor = DefaultPredictor(cfg)
@@ -143,8 +143,9 @@ def task_1_2():
 
         # Get GT for evaluation
         _, range_val = reader.get_range_for_k(k)
+        range_val_number = np.shape(range_val)[0] # Get total number of frames for validation
         bb_gt = []
-        for frame in range_val:
+        for frame in range(range_val_number):
             boxes = []
             for box in gt[frame]:
                 boxes.append(box)
