@@ -116,7 +116,7 @@ def task_1_2():
         cfg.MODEL.WEIGHTS = model_zoo.get_checkpoint_url("COCO-Detection/faster_rcnn_X_101_32x8d_FPN_3x.yaml")
         cfg.SOLVER.IMS_PER_BATCH = 2
         cfg.SOLVER.BASE_LR = 0.00025  
-        cfg.SOLVER.MAX_ITER = 300  
+        cfg.SOLVER.MAX_ITER = 21  
         cfg.SOLVER.STEPS = []        
         cfg.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE = 128   
         cfg.MODEL.ROI_HEADS.NUM_CLASSES = 1 
@@ -128,12 +128,12 @@ def task_1_2():
         trainer.train()
 
         # Inference on the test dataset
-        val_dict = reader.get_dict_from_xml('test',K=k)
+        val_dict = reader.get_dict_from_xml('val', K=k)
 
         cfg.MODEL.WEIGHTS = os.path.join(cfg.OUTPUT_DIR, "model_final.pth")  # path to the model we just trained
         cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.5   # set a custom testing threshold
         predictor = DefaultPredictor(cfg)
- 
+        
         # Predict
         predictions = []
         for d in tqdm(val_dict):    
@@ -154,14 +154,15 @@ def task_1_2():
         predictions = detectron2converter(predictions)
         map, _, _ = mean_average_precision(bb_gt, predictions, method='score')
         print('Validation mAP for k=' + str(k) + ': ' + str(map))
+        
 
 
 def task_2():
     print('TODO')
 
 def main():
-    task_1_1()
-    #task_1_2()
+    # task_1_1()
+    task_1_2()
     #task_2()
 
 main()

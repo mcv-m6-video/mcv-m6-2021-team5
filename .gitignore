@@ -1,3 +1,5 @@
+*json
+detectron2_models/*
 # Ignore video and frames dataset
 datasets/aicity/AICity_data/train/S03/c010/*
 
