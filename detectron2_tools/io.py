@@ -62,12 +62,30 @@ class detectronReader():
         Reads an input xml file and returns a 
         detectron2 formatted list of dictionaries
         """
+        N = len(self.dataset_dicts)
+        N_train = math.floor(N*train_ratio)
+
+        # Set the range
+        if K == 0:
+            range_train = list(range(0,N_train))
+            range_val = list(range(N_train,N))
+        elif K == 1:
+            range_train = list(range(N_train,2*N_train))
+            range_val = list(range(0,N_train)) + list(range(2*N_train,N))
+        elif K == 2:
+            range_train = list(range(2*N_train,3*N_train))
+            range_val = list(range(0,2*N_train)) + list(range(3*N_train,N))
+        elif K == 3:
+            range_train = list(range(3*N_train,N))
+            range_val = list(range(0,3*N_train))
+        else:
+            print('Invalid K value, enter a K between 0 and 3')
+            return
+
         if mode == 'train':
-            # Return first 25% of the data
-            return self.dataset_dicts[0:math.floor(len(self.dataset_dicts)*train_ratio)]
+            return [self.dataset_dicts[i] for i in range_train]
         elif mode == 'val':
-            # Return last 75% of the data
-            return self.dataset_dicts[math.floor(len(self.dataset_dicts)*train_ratio):len(self.dataset_dicts)]
+            return [self.dataset_dicts[i] for i in range_val]
         else:
             print('Invalid mode: either train or val')
 
