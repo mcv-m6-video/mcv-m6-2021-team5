@@ -20,7 +20,59 @@ from utils.reader import AnnotationReader
 xmlfile = "datasets/aicity/ai_challenge_s03_c010-full_annotation.xml" 
 
 def task_1_1():
-    print('TODO')
+
+    models = ["COCO-InstanceSegmentation/mask_rcnn_X_101_32x8d_FPN_3x.yaml",
+              "COCO-InstanceSegmentation/mask_rcnn_R_101_FPN_3x.yaml",
+              "COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml"]
+
+    # Read GT in our format for evaluation
+    gt_reader = AnnotationReader(xmlfile)
+    gt = gt_reader.get_bboxes_per_frame(classes=['car'])
+
+    # Get GT for evaluation
+    bb_gt = []
+    for frame in range(535,2141):
+        boxes = []
+        for box in gt[frame]:
+            boxes.append(box)
+        bb_gt.append(boxes)
+
+    # Read the data for benchmarking
+    reader = detectronReader(xmlfile)
+
+    # Register the datasets
+    for d in ['train', 'val']:
+        DatasetCatalog.register("AICity_"+d, lambda d=d: reader.get_dict_from_xml(d[0:-1],K=k))
+        MetadataCatalog.get("AICity_"+d).set(thing_classes=['car'])
+    aicity_metadata = MetadataCatalog.get("AICity_train")
+
+    # Iterate for each model
+    for model in models:
+
+        # Create model for inference
+        model_name = (model.split('/')[1]).split('.')[0]
+        cfg = get_cfg()
+        cfg.merge_from_file(model_zoo.get_config_file(model))
+        cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.5 
+        cfg.MODEL.WEIGHTS = model_zoo.get_checkpoint_url(model)
+        predictor = DefaultPredictor(cfg)
+
+        # Inference on the test dataset
+        val_dict = reader.get_dict_from_xml('val')
+
+        # Predict
+        predictions = []
+        for d in tqdm(val_dict):    
+            im = cv2.imread(d["file_name"])
+            outputs = predictor(im) 
+            predictions.append(outputs)
+
+        # Compute mAP metrics
+        predictions = detectron2converter(predictions)
+        map, _, _ = mean_average_precision(bb_gt, predictions, method='score')
+        print('Validation mAP for '+model_name+': ' + str(map))
+
+        
 
 def task_1_2():
     """
@@ -109,7 +161,7 @@ def task_2():
 
 def main():
     task_1_1()
-    task_1_2()
-    task_2()
+    #task_1_2()
+    #task_2()
 
 main()
