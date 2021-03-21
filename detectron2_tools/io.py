@@ -154,9 +154,15 @@ def detectron2converter(input_pred):
         pred_scores = pred["instances"].scores.to("cpu")
         pred_boxes = pred["instances"].pred_boxes.to("cpu")
 
+        pred_boxes = list(pred_boxes)
+        # print(pred_boxes[0])
+        # print(pred_boxes[0][0])
+        # print(pred_boxes[0][1])
+        # print(float(pred_boxes[0][1]))
+
         box_list = []
         for i in range(0, len(pred_classes)):
-            box = BB(i, 0, 'car', pred_boxes[i,0], pred_boxes[i,1], pred_boxes[i,2], pred_boxes[i,3], pred_scores[i])
+            box = BB(i, 0, 'car', float(pred_boxes[i][0]), float(pred_boxes[i][1]), float(pred_boxes[i][2]), float(pred_boxes[i][3]), pred_scores[i])
             box_list.append(box)
 
         output_pred.append(box_list)

@@ -21,6 +21,9 @@ xmlfile = "datasets/aicity/ai_challenge_s03_c010-full_annotation.xml"
 
 def task_1_1():
 
+    start = 535
+    end = 2141
+
     models = ["COCO-InstanceSegmentation/mask_rcnn_X_101_32x8d_FPN_3x.yaml",
               "COCO-InstanceSegmentation/mask_rcnn_R_101_FPN_3x.yaml",
               "COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml"]
@@ -31,7 +34,7 @@ def task_1_1():
 
     # Get GT for evaluation
     bb_gt = []
-    for frame in range(535,2141):
+    for frame in range(start, end):
         boxes = []
         for box in gt[frame]:
             boxes.append(box)
@@ -113,7 +116,7 @@ def task_1_2():
         cfg.DATASETS.TEST = ()
         cfg.DATALOADER.NUM_WORKERS = 2
         cfg.MODEL.WEIGHTS = model_zoo.get_checkpoint_url("COCO-Detection/faster_rcnn_X_101_32x8d_FPN_3x.yaml")
-        cfg.SOLVER.IMS_PER_BATCH = 2
+        cfg.SOLVER.IMS_PER_BATCH = 21
         cfg.SOLVER.BASE_LR = 0.00025  
         cfg.SOLVER.MAX_ITER = 2  # TODO: Just for testing
         cfg.SOLVER.STEPS = []        
