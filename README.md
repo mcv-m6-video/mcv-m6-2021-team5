@@ -1,7 +1,7 @@
 # Video Surveillance for Road Traffic Monitoring - Team 5
 ## Contributors
 - Eloi Bové (eloi.bove@estudiantat.upc.edu)
-- Jordi Burgués (jburguesm@gmail.com)
+- Jordi Burgués (jordiburguesm@gmail.com)
 - Albert Jiménez (albert.jimenez.tauste@gmail.com)
 - Arnau Roche (arnau.roche@gmail.com)
 
