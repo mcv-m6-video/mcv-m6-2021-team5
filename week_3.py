@@ -48,7 +48,6 @@ def task_1_1():
 
     # Iterate for each model
     for model in models:
-
         # Create model for inference
         model_name = (model.split('/')[1]).split('.')[0]
         cfg = get_cfg()
