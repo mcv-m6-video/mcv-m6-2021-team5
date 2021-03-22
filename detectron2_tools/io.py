@@ -67,10 +67,12 @@ class detectronReader():
         # Set the range
         if K == 0:
             self.range_train = list(range(0,N_train))
-            self.range_val = list(range(N_train,N_train + 10)) # TODO: Just for testing (N)
+            #self.range_val = list(range(N_train,N_train))
+            self.range_val = list(range(N_train,N_train+10))
         elif K == 1:
             self.range_train = list(range(N_train,2*N_train))
-            self.range_val = list(range(0,N_train)) + list(range(2*N_train,N))
+            #self.range_val = list(range(0,N_train)) + list(range(2*N_train,N))
+            self.range_val = list(range(0,10)) + list(range(2*N_train,2*N_train+10))
         elif K == 2:
             self.range_train = list(range(2*N_train,3*N_train))
             self.range_val = list(range(0,2*N_train)) + list(range(3*N_train,N))
@@ -88,28 +90,28 @@ class detectronReader():
         else:
             print('Invalid mode: either train or val')
 
-    def get_range_for_k(self, K, train_ratio=0.25):
-        N = len(self.dataset_dicts)
-        N_train = math.floor(N*train_ratio)
+    # def get_range_for_k(self, K, train_ratio=0.25):
+    #     N = len(self.dataset_dicts)
+    #     N_train = math.floor(N*train_ratio)
 
-        # Set the range
-        if K == 0:
-            range_train = list(range(0,N_train))
-            range_val = list(range(N_train,N)) # TODO: Just for testing (N)
-        elif K == 1:
-            range_train = list(range(N_train,2*N_train))
-            range_val = list(range(0,N_train)) + list(range(2*N_train,N))
-        elif K == 2:
-            range_train = list(range(2*N_train,3*N_train))
-            range_val = list(range(0,2*N_train)) + list(range(3*N_train,N))
-        elif K == 3:
-            range_train = list(range(3*N_train,N))
-            range_val = list(range(0,3*N_train))
-        else:
-            print('Invalid K value, enter a K between 0 and 3')
-            return
+    #     # Set the range
+    #     if K == 0:
+    #         range_train = list(range(0,N_train))
+    #         range_val = list(range(N_train,N)) # TODO: Just for testing (N)
+    #     elif K == 1:
+    #         range_train = list(range(N_train,2*N_train))
+    #         range_val = list(range(0,N_train)) + list(range(2*N_train,N))
+    #     elif K == 2:
+    #         range_train = list(range(2*N_train,3*N_train))
+    #         range_val = list(range(0,2*N_train)) + list(range(3*N_train,N))
+    #     elif K == 3:
+    #         range_train = list(range(3*N_train,N))
+    #         range_val = list(range(0,3*N_train))
+    #     else:
+    #         print('Invalid K value, enter a K between 0 and 3')
+    #         return
         
-        return [self.dataset_dicts[i] for i in range_train], [self.dataset_dicts[i] for i in range_val]
+    #     return [self.dataset_dicts[i] for i in range_train], [self.dataset_dicts[i] for i in range_val]
 
     def detectron2converter(self, input_pred):
         """
@@ -121,7 +123,7 @@ class detectronReader():
         frame_num = 0
 
         for pred in input_pred:
-            print("Inference for frame: " + str(int(self.range_val[frame_num])))
+            #print("Inference for frame: " + str(int(self.range_val[frame_num])))
             print(pred["instances"])
             pred_classes = pred["instances"].pred_classes.to("cpu")
             pred_scores = pred["instances"].scores.to("cpu")

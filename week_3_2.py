@@ -4,7 +4,6 @@ import numpy as np
 import os, cv2, random
 from matplotlib import pyplot as plt
 from tqdm import tqdm
-from utils.plotting import plot_detections
 
 from detectron2.utils.visualizer import Visualizer
 from detectron2.data import MetadataCatalog, DatasetCatalog
@@ -13,10 +12,11 @@ from detectron2.engine import DefaultTrainer, DefaultPredictor
 from detectron2.config import get_cfg
 from detectron2 import model_zoo
 
-from detectron2_tools.io import detectronReader
+from detectron2_tools.io import detectronReader, detectron2converter
 from evaluation.ap import mean_average_precision
 from utils.reader import AnnotationReader
-from tracking.tracking import track_max_overlap, track_kalman
+
+from utils.plotting import plot_detections 
 
 
 xmlfile = "datasets/aicity/ai_challenge_s03_c010-full_annotation.xml" 
@@ -76,15 +76,12 @@ def task_1_1():
         map, _, _ = mean_average_precision(bb_gt, predictions, method='score')
         print('Validation mAP for '+model_name+': ' + str(map))
 
-    
+        
+
 def task_1_2():
     """
     This function reads the data and fine tunes an existing detectron2 model
     """
-    # Read GT in our format for evaluation
-    gt_reader = AnnotationReader(xmlfile)
-    gt = gt_reader.get_bboxes_per_frame(classes=['car'])
-
     # K=4 cross validation
     for k in range(0,4):
 
@@ -95,7 +92,6 @@ def task_1_2():
         for d in ['train'+str(k), 'val'+str(k)]:
             DatasetCatalog.register("AICity_"+d, lambda d=d: reader.get_dict_from_xml(d[0:-1],K=k))
             MetadataCatalog.get("AICity_"+d).set(thing_classes=['car'])
-        
         aicity_metadata = MetadataCatalog.get("AICity_train0")
 
         # Read the dataset from the xml file
@@ -144,6 +140,10 @@ def task_1_2():
             outputs = predictor(im) 
             predictions.append(outputs)
 
+        # Read GT in our format for evaluation
+        gt_reader = AnnotationReader(xmlfile)
+        gt = gt_reader.get_bboxes_per_frame(classes=['car'])
+
         # Get GT for evaluation
         _, range_val = reader.get_range_for_k(k)
         range_val_number = np.shape(range_val)[0] # Get total number of frames for validation
@@ -158,25 +158,23 @@ def task_1_2():
         predictions = detectron2converter(predictions)
         map, _, _ = mean_average_precision(bb_gt, predictions, method='score')
         print('Validation mAP for k=' + str(k) + ': ' + str(map))
-        
+
 def task_1_1_bis():
     k = 0
     models = ["COCO-InstanceSegmentation/mask_rcnn_X_101_32x8d_FPN_3x.yaml",
             "COCO-InstanceSegmentation/mask_rcnn_R_101_FPN_3x.yaml",
             "COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml"]
     for mod in models:
-        compute(output_dir = None, k=k, train = False, validate = True, plot=True, model_name = mod)
+        compute(output_dir = None, k=k, train = False, validate = True, model_name = mod)
 
 
 def task_1_2_bis():
-    #for k in range(0,4):
-    k = 0
-    #output_dir = 'detectron2_models/faster_rcnn_X_101_32x8d_FPN_3x_KV_' + str(k)
-    output_dir = 'detectron2_models/faster_rcnn_X_101_32x8d_FPN_3x_KV_0_secure'
-    compute(output_dir = output_dir, k=k, train = False, validate = True, plot = True, model_name = "COCO-Detection/faster_rcnn_X_101_32x8d_FPN_3x.yaml")
+    for k in range(0,4):
+        output_dir = 'detectron2_models/faster_rcnn_X_101_32x8d_FPN_3x_KV_' + str(k)
+        compute(output_dir = output_dir, k=k, train = True, validate = True, model_name = "COCO-Detection/faster_rcnn_X_101_32x8d_FPN_3x.yaml")
 
 
-def compute(output_dir, k, train, validate, plot = False, model_name = "COCO-Detection/faster_rcnn_X_101_32x8d_FPN_3x.yaml"):
+def compute(output_dir, k, train = True, validate = True, model_name = "COCO-Detection/faster_rcnn_X_101_32x8d_FPN_3x.yaml"):
 
     # Init dataset reader
     reader = detectronReader(xmlfile)
@@ -198,22 +196,22 @@ def compute(output_dir, k, train, validate, plot = False, model_name = "COCO-Det
     #     plt.imshow(out.get_image()[:, :, ::-1])
     #     plt.show()
 
-    # Config file
+    # Train
     cfg = get_cfg()
     cfg.merge_from_file(model_zoo.get_config_file(model_name))
     
-    cfg.DATASETS.TRAIN = ("AICity_train"+str(k),)
-    cfg.DATASETS.TEST = ()
-    cfg.DATALOADER.NUM_WORKERS = 2
-    cfg.SOLVER.IMS_PER_BATCH = 2
-    cfg.SOLVER.BASE_LR = 0.00025  
-    cfg.SOLVER.MAX_ITER = 2  # TODO: Just for testing
-    cfg.SOLVER.STEPS = []        
-    cfg.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE = 128   
-    cfg.MODEL.ROI_HEADS.NUM_CLASSES = 1 
-
     if train:
         cfg.OUTPUT_DIR = output_dir
+        cfg.DATASETS.TRAIN = ("AICity_train"+str(k),)
+        cfg.DATASETS.TEST = ()
+        cfg.DATALOADER.NUM_WORKERS = 2
+        cfg.SOLVER.IMS_PER_BATCH = 2
+        cfg.SOLVER.BASE_LR = 0.00025  
+        cfg.SOLVER.MAX_ITER = 2  # TODO: Just for testing
+        cfg.SOLVER.STEPS = []        
+        cfg.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE = 128   
+        cfg.MODEL.ROI_HEADS.NUM_CLASSES = 1 
+
         os.makedirs(cfg.OUTPUT_DIR, exist_ok=True)
         trainer = DefaultTrainer(cfg) 
         trainer.resume_or_load(resume=False)
@@ -240,60 +238,26 @@ def compute(output_dir, k, train, validate, plot = False, model_name = "COCO-Det
         gt = gt_reader.get_bboxes_per_frame(classes=['car'])
 
         # Get GT for evaluation
-        # _, range_val = reader.get_range_for_k(k)
-        # range_val_number = np.shape(range_val)[0] # Get total number of frames for validation
+        _, range_val = reader.get_range_for_k(k)
+        range_val_number = np.shape(range_val)[0] # Get total number of frames for validation
         bb_gt = []
-        
-        print(reader.range_val)
-        for frame_num in reader.range_val:
+        for frame in range(range_val_number):
             boxes = []
-            for box in gt[frame_num]:
+            for box in gt[frame]:
                 boxes.append(box)
             bb_gt.append(boxes)
 
         # Compute mAP metrics
-        predictions = reader.detectron2converter(predictions)
+        predictions = detectron2converter(predictions)
         map, _, _ = mean_average_precision(bb_gt, predictions, method='score')
-        mod_name = (model_name.split('/')[1]).split('.')[0]
-        print('Validation mAP for model ' + mod_name + ' and k=' + str(k) + ': ' + str(map))
-
-    if plot:
-        im_det = plot_detections(predictions[0], bb_gt[0], show=False)
-        cv2.imwrite("detections_0.png", im_det)
-
-        im_det = plot_detections(predictions[9], bb_gt[9], show=False)
-        cv2.imwrite("detections_9.png", im_det)
-
-def task_2(model='rcnn',method='overlap'):
-
-    # Load GT
-    # Read GT in our format for evaluation
-    gt_reader = AnnotationReader(xmlfile)
-    gt = gt_reader.get_bboxes_per_frame(classes=['car'])
-
-    # Get GT for evaluation
-    bb_gt = []
-    start, end = 535, 2141
-    for frame in range(start, end):
-        boxes = []
-        for box in gt[frame]:
-            boxes.append(box)
-        bb_gt.append(boxes)
-
-    if method == 'overlap':
-        track_max_overlap(bb_gt, bb_gt)
-    elif method == 'kalman':
-        track_kalman(bb_gt, bb_gt)
-    else:
-        print('Invalid tracking method: overlap or kalman')
-    
+        model_name = (model.split('/')[1]).split('.')[0]
+        print('Validation mAP for model ' + model_name + ' and k=' + str(k) + ': ' + str(map))
 
 def main():
     # task_1_1()
-    # task_1_2()
-    task_1_1_bis()
+    #task_1_2()
     #task_1_2_bis()
-    # task_2(method='overlap')
-    # task_2(method='kalman')
+    task_1_1_bis()
+    #task_2()
 
 main()
