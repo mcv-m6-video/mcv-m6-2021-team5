@@ -113,7 +113,7 @@ class detectronReader():
         
     #     return [self.dataset_dicts[i] for i in range_train], [self.dataset_dicts[i] for i in range_val]
 
-    def detectron2converter(self, input_pred):
+    def detectron2converter(self, input_pred, coco=False):
         """
         Convert the detectron2 prediction format
         to ours to compute the mAP
@@ -133,7 +133,11 @@ class detectronReader():
 
             box_list = []
             for i in range(0, len(pred_classes)):
-                box = BB(int(self.range_val[frame_num]), 0, 'car', float(pred_boxes[i][0]), float(pred_boxes[i][1]), float(pred_boxes[i][2]), float(pred_boxes[i][3]), pred_scores[i])
+                if coco:
+                    if pred_classes[i] == 2: # class 2 = car
+                        box = BB(int(self.range_val[frame_num]), 0, 'car', float(pred_boxes[i][0]), float(pred_boxes[i][1]), float(pred_boxes[i][2]), float(pred_boxes[i][3]), pred_scores[i])       
+                else:
+                    box = BB(int(self.range_val[frame_num]), 0, 'car', float(pred_boxes[i][0]), float(pred_boxes[i][1]), float(pred_boxes[i][2]), float(pred_boxes[i][3]), pred_scores[i])
                 box_list.append(box)
 
             output_pred.append(box_list)

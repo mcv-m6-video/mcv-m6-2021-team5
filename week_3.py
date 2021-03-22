@@ -72,7 +72,7 @@ def task_1_1():
             predictions.append(outputs)
 
         # Compute mAP metrics
-        predictions = detectron2converter(predictions)
+        predictions = detectron2converter(predictions, coco=True)
         map, _, _ = mean_average_precision(bb_gt, predictions, method='score')
         print('Validation mAP for '+model_name+': ' + str(map))
 
@@ -155,7 +155,7 @@ def task_1_2():
             bb_gt.append(boxes)
 
         # Compute mAP metrics
-        predictions = detectron2converter(predictions)
+        predictions = detectron2converter(predictions, coco=False)
         map, _, _ = mean_average_precision(bb_gt, predictions, method='score')
         print('Validation mAP for k=' + str(k) + ': ' + str(map))
         
@@ -165,7 +165,7 @@ def task_1_1_bis():
             "COCO-InstanceSegmentation/mask_rcnn_R_101_FPN_3x.yaml",
             "COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml"]
     for mod in models:
-        compute(output_dir = None, k=k, train = False, validate = True, plot=True, model_name = mod)
+        compute(output_dir = None, k=k, train = False, validate = True, plot=True, model_name = mod, coco=True)
 
 
 def task_1_2_bis():
@@ -176,7 +176,7 @@ def task_1_2_bis():
     compute(output_dir = output_dir, k=k, train = False, validate = True, plot = True, model_name = "COCO-Detection/faster_rcnn_X_101_32x8d_FPN_3x.yaml")
 
 
-def compute(output_dir, k, train, validate, plot = False, model_name = "COCO-Detection/faster_rcnn_X_101_32x8d_FPN_3x.yaml"):
+def compute(output_dir, k, train, validate, plot = False, model_name = "COCO-Detection/faster_rcnn_X_101_32x8d_FPN_3x.yaml", coco=False):
 
     # Init dataset reader
     reader = detectronReader(xmlfile)
@@ -252,7 +252,7 @@ def compute(output_dir, k, train, validate, plot = False, model_name = "COCO-Det
             bb_gt.append(boxes)
 
         # Compute mAP metrics
-        predictions = reader.detectron2converter(predictions)
+        predictions = reader.detectron2converter(predictions, coco=coco)
         map, _, _ = mean_average_precision(bb_gt, predictions, method='score')
         mod_name = (model_name.split('/')[1]).split('.')[0]
         print('Validation mAP for model ' + mod_name + ' and k=' + str(k) + ': ' + str(map))
