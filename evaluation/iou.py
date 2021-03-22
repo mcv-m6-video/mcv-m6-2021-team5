@@ -76,3 +76,8 @@ def iou_vectorized(boxes1, boxes2):
     overlaps = inters / uni
 
     return overlaps
+
+def compute_bb_distance(box1, box2):
+    center1 = box1.center
+    center2 = box2.center
+    return np.sqrt((center1[0]-center2[0])**2+(center1[1]-center2[1])**2)

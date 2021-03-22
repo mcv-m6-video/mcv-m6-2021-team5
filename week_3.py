@@ -1,20 +1,21 @@
-import torch, torchvision
-import detectron2
+# import torch, torchvision
+# import detectron2
 import numpy as np
 import os, cv2, random
 from matplotlib import pyplot as plt
 from tqdm import tqdm
 
-from detectron2.utils.visualizer import Visualizer
-from detectron2.data import MetadataCatalog, DatasetCatalog
-from detectron2.evaluation import COCOEvaluator
-from detectron2.engine import DefaultTrainer, DefaultPredictor
-from detectron2.config import get_cfg
-from detectron2 import model_zoo
+# from detectron2.utils.visualizer import Visualizer
+# from detectron2.data import MetadataCatalog, DatasetCatalog
+# from detectron2.evaluation import COCOEvaluator
+# from detectron2.engine import DefaultTrainer, DefaultPredictor
+# from detectron2.config import get_cfg
+# from detectron2 import model_zoo
 
-from detectron2_tools.io import detectronReader, detectron2converter
+# from detectron2_tools.io import detectronReader, detectron2converter
 from evaluation.ap import mean_average_precision
 from utils.reader import AnnotationReader
+from tracking.tracking import track_max_overlap
 
 
 xmlfile = "datasets/aicity/ai_challenge_s03_c010-full_annotation.xml" 
@@ -160,12 +161,31 @@ def task_1_2():
         
 
 
-def task_2():
-    print('TODO')
+def task_2_1():
+
+    # Load GT
+    # Read GT in our format for evaluation
+    gt_reader = AnnotationReader(xmlfile)
+    gt = gt_reader.get_bboxes_per_frame(classes=['car'])
+
+    # Get GT for evaluation
+    bb_gt = []
+    start, end = 535, 635
+    for frame in range(start, end):
+        boxes = []
+        for box in gt[frame]:
+            boxes.append(box)
+        bb_gt.append(boxes)
+
+    #Tracking with max IoU
+    track_max_overlap(bb_gt, bb_gt)
+
+    
+
 
 def main():
     # task_1_1()
-    task_1_2()
-    #task_2()
+    #task_1_2()
+    task_2_1()
 
 main()

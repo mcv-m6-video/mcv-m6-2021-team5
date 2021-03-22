@@ -32,3 +32,9 @@ class BB:
 
     def __str__(self):
         return f'frame={self.frame}, id={self.id}, label={self.label}, bbox={self.bbox}, confidence={self.score}'
+
+    def update_bbox(self, new_bbox):
+        self.xtl = new_bbox.xtl
+        self.ytl = new_bbox.ytl
+        self.xbr = new_bbox.xbr
+        self.ybr = new_bbox.ybr

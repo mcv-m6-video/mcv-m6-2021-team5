@@ -119,6 +119,7 @@ class AnnotationReader:
                         current_box.ybr = box_noisy[3]
                         bboxes.append(current_box)
                 else:
+                    current_box.id = bb.id
                     bboxes.append(current_box)
 
         bboxes = group_by_frame(bboxes)

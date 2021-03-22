@@ -44,6 +44,7 @@ In order to preview the different detections in the frames, vdo.avi should be do
 `pip install tqdm`
 `pip install scipy`
 `pip install sklearn`
+`pip install motmetrics`
   
 ## Execution  :gear:
 The program is executed as follows, for week X:

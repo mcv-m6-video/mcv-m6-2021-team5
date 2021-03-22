@@ -185,5 +185,6 @@ Thumbs.db #thumbnail cache on Windows
 *.code-workspace
 
 IMAGES/*
+figures/*
 
 # End of https://www.toptal.com/developers/gitignore/api/python,jupyternotebooks,vscode,opencv
