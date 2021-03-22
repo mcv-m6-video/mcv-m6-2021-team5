@@ -45,6 +45,8 @@ In order to preview the different detections in the frames, vdo.avi should be do
 `pip install scipy`
 `pip install sklearn`
 `pip install motmetrics`
+`pip install scikit-image`
+`pip install filterpy`
   
 ## Execution  :gear:
 The program is executed as follows, for week X:

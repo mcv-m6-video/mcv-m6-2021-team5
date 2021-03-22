@@ -15,6 +15,10 @@ class BB:
         return [self.xtl, self.ytl, self.xbr, self.ybr]
 
     @property
+    def bbox_score(self):
+        return [self.xtl, self.ytl, self.xbr, self.ybr, self.score]
+
+    @property
     def width(self):
         return abs(self.xbr - self.xtl)
 
