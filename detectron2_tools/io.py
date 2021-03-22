@@ -67,12 +67,12 @@ class detectronReader():
         # Set the range
         if K == 0:
             self.range_train = list(range(0,N_train))
-            #self.range_val = list(range(N_train,N_train))
-            self.range_val = list(range(N_train,N_train+10))
+            self.range_val = list(range(N_train,N_train))
+            #self.range_val = list(range(N_train,N_train+10))
         elif K == 1:
             self.range_train = list(range(N_train,2*N_train))
-            #self.range_val = list(range(0,N_train)) + list(range(2*N_train,N))
-            self.range_val = list(range(0,10)) + list(range(2*N_train,2*N_train+10))
+            self.range_val = list(range(0,N_train)) + list(range(2*N_train,N))
+            #self.range_val = list(range(0,10)) + list(range(2*N_train,2*N_train+10))
         elif K == 2:
             self.range_train = list(range(2*N_train,3*N_train))
             self.range_val = list(range(0,2*N_train)) + list(range(3*N_train,N))
@@ -129,6 +129,7 @@ class detectronReader():
             pred_scores = pred["instances"].scores.to("cpu")
             pred_boxes = pred["instances"].pred_boxes.to("cpu")
 
+
             pred_boxes = list(pred_boxes)
 
             box_list = []
@@ -136,9 +137,10 @@ class detectronReader():
                 if coco:
                     if pred_classes[i] == 2: # class 2 = car
                         box = BB(int(self.range_val[frame_num]), 0, 'car', float(pred_boxes[i][0]), float(pred_boxes[i][1]), float(pred_boxes[i][2]), float(pred_boxes[i][3]), pred_scores[i])       
+                        box_list.append(box)
                 else:
                     box = BB(int(self.range_val[frame_num]), 0, 'car', float(pred_boxes[i][0]), float(pred_boxes[i][1]), float(pred_boxes[i][2]), float(pred_boxes[i][3]), pred_scores[i])
-                box_list.append(box)
+                    box_list.append(box)
 
             output_pred.append(box_list)
             frame_num += 1
