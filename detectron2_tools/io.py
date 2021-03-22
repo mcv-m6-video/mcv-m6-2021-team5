@@ -67,7 +67,7 @@ class detectronReader():
         # Set the range
         if K == 0:
             range_train = list(range(0,N_train))
-            range_val = list(range(N_train,N_train+5)) # TODO: Just for testing (N)
+            range_val = list(range(N_train,N)) # TODO: Just for testing (N)
         elif K == 1:
             range_train = list(range(N_train,2*N_train))
             range_val = list(range(0,N_train)) + list(range(2*N_train,N))
@@ -95,7 +95,7 @@ class detectronReader():
         # Set the range
         if K == 0:
             range_train = list(range(0,N_train))
-            range_val = list(range(N_train,N_train+5)) # TODO: Just for testing (N)
+            range_val = list(range(N_train,N)) # TODO: Just for testing (N)
         elif K == 1:
             range_train = list(range(N_train,2*N_train))
             range_val = list(range(0,N_train)) + list(range(2*N_train,N))
