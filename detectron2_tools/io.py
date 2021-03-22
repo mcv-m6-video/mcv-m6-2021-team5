@@ -66,25 +66,25 @@ class detectronReader():
 
         # Set the range
         if K == 0:
-            range_train = list(range(0,N_train))
-            range_val = list(range(N_train,N)) # TODO: Just for testing (N)
+            self.range_train = list(range(0,N_train))
+            self.range_val = list(range(N_train,N_train + 10)) # TODO: Just for testing (N)
         elif K == 1:
-            range_train = list(range(N_train,2*N_train))
-            range_val = list(range(0,N_train)) + list(range(2*N_train,N))
+            self.range_train = list(range(N_train,2*N_train))
+            self.range_val = list(range(0,N_train)) + list(range(2*N_train,N))
         elif K == 2:
-            range_train = list(range(2*N_train,3*N_train))
-            range_val = list(range(0,2*N_train)) + list(range(3*N_train,N))
+            self.range_train = list(range(2*N_train,3*N_train))
+            self.range_val = list(range(0,2*N_train)) + list(range(3*N_train,N))
         elif K == 3:
-            range_train = list(range(3*N_train,N))
-            range_val = list(range(0,3*N_train))
+            self.range_train = list(range(3*N_train,N))
+            self.range_val = list(range(0,3*N_train))
         else:
             print('Invalid K value, enter a K between 0 and 3')
             return
 
         if mode == 'train':
-            return [self.dataset_dicts[i] for i in range_train]
+            return [self.dataset_dicts[i] for i in self.range_train]
         elif mode == 'val':
-            return [self.dataset_dicts[i] for i in range_val]
+            return [self.dataset_dicts[i] for i in self.range_val]
         else:
             print('Invalid mode: either train or val')
 
@@ -110,6 +110,34 @@ class detectronReader():
             return
         
         return [self.dataset_dicts[i] for i in range_train], [self.dataset_dicts[i] for i in range_val]
+
+    def detectron2converter(self, input_pred):
+        """
+        Convert the detectron2 prediction format
+        to ours to compute the mAP
+        """
+        
+        output_pred = []
+        frame_num = 0
+
+        for pred in input_pred:
+            print("Inference for frame: " + str(int(self.range_val[frame_num])))
+            print(pred["instances"])
+            pred_classes = pred["instances"].pred_classes.to("cpu")
+            pred_scores = pred["instances"].scores.to("cpu")
+            pred_boxes = pred["instances"].pred_boxes.to("cpu")
+
+            pred_boxes = list(pred_boxes)
+
+            box_list = []
+            for i in range(0, len(pred_classes)):
+                box = BB(int(self.range_val[frame_num]), 0, 'car', float(pred_boxes[i][0]), float(pred_boxes[i][1]), float(pred_boxes[i][2]), float(pred_boxes[i][3]), pred_scores[i])
+                box_list.append(box)
+
+            output_pred.append(box_list)
+            frame_num += 1
+
+        return output_pred
 
 def read_detections_file(filename):
     output = []
@@ -140,31 +168,3 @@ def read_detections_file(filename):
             pred_classes.append(0)
             scores.append(float(det[6]))
         return dataset_dicts
-
-def detectron2converter(input_pred):
-    """
-    Convert the detectron2 prediction format
-    to ours to compute the mAP
-    """
-    
-    output_pred = []
-    for pred in input_pred:
-        print(pred["instances"])
-        pred_classes = pred["instances"].pred_classes.to("cpu")
-        pred_scores = pred["instances"].scores.to("cpu")
-        pred_boxes = pred["instances"].pred_boxes.to("cpu")
-
-        pred_boxes = list(pred_boxes)
-        # print(pred_boxes[0])
-        # print(pred_boxes[0][0])
-        # print(pred_boxes[0][1])
-        # print(float(pred_boxes[0][1]))
-
-        box_list = []
-        for i in range(0, len(pred_classes)):
-            box = BB(i, 0, 'car', float(pred_boxes[i][0]), float(pred_boxes[i][1]), float(pred_boxes[i][2]), float(pred_boxes[i][3]), pred_scores[i])
-            box_list.append(box)
-
-        output_pred.append(box_list)
-
-    return output_pred
