@@ -6,6 +6,7 @@ import os
 import math
 from utils.bb import BB
 import random
+import numpy as np
 
 class detectronReader():
     def __init__(self, xmlfile):
