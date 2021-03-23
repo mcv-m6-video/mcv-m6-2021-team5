@@ -113,12 +113,12 @@ def track_kalman(bb_det, bb_gt):
 
         # Draw the image and also put the id
         for t in trackers:
-          np.random.seed(int(t[4]))
-          c = list(np.random.choice(range(int(256)), size=3)) 
-          color = (int(c[0]), int(c[1]), int(c[2]))
-          cv2.rectangle(im, (int(t[0]),int(t[1])), (int(t[2]), int(t[3])), color, 3) 
-          cv2.putText(im,str(int(t[4])), (int(t[0]),int(t[1])), 
-                      cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2)
+            np.random.seed(int(t[4]))
+            c = list(np.random.choice(range(int(256)), size=3)) 
+            color = (int(c[0]), int(c[1]), int(c[2]))
+            cv2.rectangle(im, (int(t[0]),int(t[1])), (int(t[2]), int(t[3])), color, 3) 
+            cv2.putText(im,str(int(t[4])), (int(t[0]),int(t[1])), 
+                        cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2)
         
         cv2.imwrite('figures/tracking/kalman/frame_' + format(i, '04d') + '.jpg', im) 
 

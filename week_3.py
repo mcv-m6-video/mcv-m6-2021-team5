@@ -18,7 +18,7 @@ from utils.plotting import plot_detections
 from evaluation.ap import mean_average_precision
 from utils.reader import AnnotationReader
 from tracking.tracking import track_max_overlap, track_kalman
-import pickle as pkl
+from utils.non_maximum_supression import apply_non_max_supression
 
 
 xmlfile = "datasets/aicity/ai_challenge_s03_c010-full_annotation.xml" 
@@ -311,9 +311,12 @@ def compute(iteration, output_dir, k, train, validate, plot = False, model_name 
 def task_2(model='rcnn',method='overlap'):
 
     #Load detections
-    detections_filename = 'models/faster_rcnn_X_101_32x8d_FPN_3x_1_400_ours.pkl'
+    detections_filename = 'models/faster_rcnn_X_101_32x8d_FPN_3x_1_700_ours.pkl'
     with open(detections_filename, 'rb') as f:
             bb_det = pkl.load(f)
+
+    for i, frame_det in enumerate(bb_det):
+        bb_det[i] = apply_non_max_supression(frame_det, i, 0.65)
 
     # Load GT
     # Read GT in our format for evaluation
@@ -333,7 +336,7 @@ def task_2(model='rcnn',method='overlap'):
     if method == 'overlap':
         track_max_overlap(bb_det, bb_gt)
     elif method == 'kalman':
-        track_kalman(bb_gt, bb_gt)
+        track_kalman(bb_det, bb_gt)
     else:
         print('Invalid tracking method: overlap or kalman')
     
@@ -341,9 +344,9 @@ def task_2(model='rcnn',method='overlap'):
 def main():
     # task_1_1()
     # task_1_2()
-    task_1_1_bis()
-    task_1_2_bis()
+    # task_1_1_bis()
+    # task_1_2_bis()
     # task_2(method='overlap')
-    # task_2(method='kalman')
+    task_2(method='kalman')
 
 main()
