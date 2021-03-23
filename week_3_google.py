@@ -167,10 +167,13 @@ def task_1_1_bis():
             "COCO-InstanceSegmentation/mask_rcnn_X_101_32x8d_FPN_3x.yaml",
             "COCO-InstanceSegmentation/mask_rcnn_R_101_FPN_3x.yaml",
             "COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml"]
-    for it in [6, 7, 8, 9]:
-        for mod in models:
-            compute(iteration = it, output_dir = None, k=k, train = False, validate = True, plot=True, model_name = mod, coco=True)
+    l = 0
+    it = [2, 3, 4, 5]
+    for mod in models:
+        compute(iteration = it[l], output_dir = None, k=k, train = False, validate = True, plot=True, model_name = mod, coco=True)
         #compute(output_dir = None, k=k, train = False, validate = True, plot=True, model_name = "COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml", coco=True)
+        l = l+1
+    
 
 
 def task_1_2_bis():
