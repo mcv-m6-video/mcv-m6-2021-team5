@@ -5,6 +5,7 @@ import os, cv2, random
 from matplotlib import pyplot as plt
 from tqdm import tqdm
 from utils.plotting import plot_detections
+import pickle as pkl
 
 from detectron2.utils.visualizer import Visualizer
 from detectron2.data import MetadataCatalog, DatasetCatalog
@@ -289,7 +290,7 @@ def compute(iteration, output_dir, k, train, validate, plot = False, model_name 
 def task_2(model='rcnn',method='overlap'):
 
     #Load detections
-    detections_filename = 'models/faster_rcnn_X_101_32x8d_FPN_3x_1_400_ours.pkl'
+    detections_filename = 'models/faster_rcnn_X_101_32x8d_FPN_3x_1_700_ours.pkl'
     with open(detections_filename, 'rb') as f:
             bb_det = pkl.load(f)
 
@@ -321,7 +322,7 @@ def main():
     # task_1_2()
     # task_1_1_bis()
     # task_1_2_bis()
-    task_2(method='overlap')
-    # task_2(method='kalman')
+    # task_2(method='overlap')
+    task_2(method='kalman')
 
 main()
