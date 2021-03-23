@@ -194,12 +194,15 @@ def compute(iteration, output_dir, k, train, validate, plot = False, model_name 
 
     # Register the datasets for this iteration
     print(iteration)
+    string = ['train', 'val']
+    l = 0
     for d in ['train'+str(k)+str(iteration), 'val'+str(k)+str(iteration)]:
         print(d)
         print("NAMEEEEEEEEEEEEEEEEEEEEEEEEEEE")
         print(d[0:-4])
-        DatasetCatalog.register("AICity_"+d, lambda d=d: reader.get_dict_from_xml(d[0:-3],K=k))
+        DatasetCatalog.register("AICity_"+d, lambda d=d: reader.get_dict_from_xml(l[0],K=k))
         MetadataCatalog.get("AICity_"+d).set(thing_classes=['car'])
+        l = l+1
     aicity_metadata = MetadataCatalog.get("AICity_"+d)
 
     # Read the dataset from the xml file
