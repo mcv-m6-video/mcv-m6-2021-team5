@@ -180,7 +180,7 @@ def task_1_2_bis():
     #for iteration in (200, 400, 600):
     k = 4
     for it in [4, 7]:
-        output_dir = 'detectron2_models/faster_rcnn_X_101_32x8d_FPN_3x_KV_' + str(k) + "_" + str(iteration)
+        output_dir = 'detectron2_models/faster_rcnn_X_101_32x8d_FPN_3x_KV_' + str(k) + "_" + str(it)
         compute(iteration = it, output_dir = output_dir, k=k, train = True, validate = True, plot = True, model_name = "COCO-Detection/faster_rcnn_X_101_32x8d_FPN_3x.yaml")
     print(maps)
 
@@ -341,7 +341,7 @@ def task_2(model='rcnn',method='overlap'):
 def main():
     # task_1_1()
     # task_1_2()
-    task_1_1_bis()
+    #task_1_1_bis()
     task_1_2_bis()
     # task_2(method='overlap')
     # task_2(method='kalman')
