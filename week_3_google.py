@@ -16,7 +16,7 @@ from detectron2 import model_zoo
 from detectron2_tools.io import detectronReader
 from evaluation.ap import mean_average_precision
 from utils.reader import AnnotationReader
-from tracking.tracking import track_max_overlap, track_kalman
+#from tracking.tracking import track_max_overlap, track_kalman
 import pickle as pkl
 
 
