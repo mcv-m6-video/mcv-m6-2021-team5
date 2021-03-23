@@ -4,7 +4,7 @@ import numpy as np
 import os, cv2, random
 from matplotlib import pyplot as plt
 from tqdm import tqdm
-from utils.plotting import plot_detections
+import pickle as pkl
 
 from detectron2.utils.visualizer import Visualizer
 from detectron2.data import MetadataCatalog, DatasetCatalog
@@ -14,6 +14,7 @@ from detectron2.config import get_cfg
 from detectron2 import model_zoo
 
 from detectron2_tools.io import detectronReader
+from utils.plotting import plot_detections
 from evaluation.ap import mean_average_precision
 from utils.reader import AnnotationReader
 from tracking.tracking import track_max_overlap, track_kalman
@@ -311,7 +312,7 @@ def task_2(model='rcnn',method='overlap'):
     if method == 'overlap':
         track_max_overlap(bb_det, bb_gt)
     elif method == 'kalman':
-        track_kalman(bb_det, bb_gt)
+        track_kalman(bb_gt, bb_gt)
     else:
         print('Invalid tracking method: overlap or kalman')
     
@@ -321,7 +322,7 @@ def main():
     # task_1_2()
     # task_1_1_bis()
     # task_1_2_bis()
-    task_2(method='overlap')
-    # task_2(method='kalman')
+    #task_2(method='overlap')
+    task_2(method='kalman')
 
 main()

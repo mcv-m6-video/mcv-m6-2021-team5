@@ -66,14 +66,14 @@ def track_max_overlap(bb_det, bb_gt):
                 #     new_targets.append(t)
 
         #Draw the image and also put the id
-        # for t in new_targets:
-        #     np.random.seed(t.id)
-        #     c = list(np.random.choice(range(int(256)), size=3)) 
-        #     color = (int(c[0]), int(c[1]), int(c[2]))
-        #     cv2.rectangle(im, (int(t.xtl), int(t.ytl)), (int(t.xbr), int(t.ybr)), color=color, thickness=3) 
-        #     cv2.putText(im,str(t.id), (int(t.xtl), int(t.ytl)), 
-        #                 cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2)
-        # cv2.imwrite('figures/tracking/overlap/frame_' + format(i, '04d') + '.jpg', im) 
+        for t in new_targets:
+            np.random.seed(t.id)
+            c = list(np.random.choice(range(int(256)), size=3)) 
+            color = (int(c[0]), int(c[1]), int(c[2]))
+            cv2.rectangle(im, (int(t.xtl), int(t.ytl)), (int(t.xbr), int(t.ybr)), color=color, thickness=3) 
+            cv2.putText(im,str(t.id), (int(t.xtl), int(t.ytl)), 
+                        cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2)
+        cv2.imwrite('figures/tracking/overlap/frame_' + format(i, '04d') + '.jpg', im) 
         
         #Update targets
         targets = new_targets
@@ -107,18 +107,20 @@ def track_kalman(bb_det, bb_gt):
         # Update Kalman tracker and obtain new prediction
         # Dets should be an array of bboxes (x1,y1,x2,y2,score)
         dets = np.array([det.bbox_score for det in frame_dets])
+        #print(dets)
+        #print(np.shape(dets))
         trackers = mot_tracker.update(dets)
 
         # Draw the image and also put the id
-        # for t in trackers:
-        #   np.random.seed(int(t[4]))
-        #   c = list(np.random.choice(range(int(256)), size=3)) 
-        #   color = (int(c[0]), int(c[1]), int(c[2]))
-        #   cv2.rectangle(im, (int(t[0]),int(t[1])), (int(t[2]), int(t[3])), color, 3) 
-        #   cv2.putText(im,str(int(t[4])), (int(t[0]),int(t[1])), 
-        #               cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2)
+        for t in trackers:
+          np.random.seed(int(t[4]))
+          c = list(np.random.choice(range(int(256)), size=3)) 
+          color = (int(c[0]), int(c[1]), int(c[2]))
+          cv2.rectangle(im, (int(t[0]),int(t[1])), (int(t[2]), int(t[3])), color, 3) 
+          cv2.putText(im,str(int(t[4])), (int(t[0]),int(t[1])), 
+                      cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2)
         
-        # cv2.imwrite('figures/tracking/kalman/frame_' + format(i, '04d') + '.jpg', im) 
+        cv2.imwrite('figures/tracking/kalman/frame_' + format(i, '04d') + '.jpg', im) 
 
         #Compute distaces and create id arrays
         gt_ids = [gt.id for gt in gt_dets]

@@ -47,6 +47,8 @@ In order to preview the different detections in the frames, vdo.avi should be do
 `pip install motmetrics`
 `pip install scikit-image`
 `pip install filterpy`
+`pip install lap`
+`sudo apt-get install python3-tk`
   
 ## Execution  :gear:
 The program is executed as follows, for week X:
