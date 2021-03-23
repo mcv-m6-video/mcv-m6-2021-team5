@@ -69,8 +69,8 @@ class detectronReader():
         # Set the range
         if K == 0:
             self.range_train = list(range(0,N_train))
-            #self.range_val = list(range(N_train,N))
-            self.range_val = list(range(N_train,N_train+10))
+            self.range_val = list(range(N_train,N))
+            #self.range_val = list(range(N_train,N_train+10))
         elif K == 1:
             self.range_train = list(range(N_train,2*N_train))
             self.range_val = list(range(0,N_train)) + list(range(2*N_train,N))
@@ -86,10 +86,10 @@ class detectronReader():
             lin = np.linspace(0,N-1,N)
             lin = list(lin.astype(int))
             random.shuffle(lin)
-            # self.range_train = list(lin[0:N_train])
-            # self.range_val = list(lin[N_train:N])
-            self.range_train = list(lin[0:10])
-            self.range_val = list(lin[N_train:N_train+10])
+            self.range_train = list(lin[0:N_train])
+            self.range_val = list(lin[N_train:N])
+            #self.range_train = list(lin[0:10])
+            #self.range_val = list(lin[N_train:N_train+10])
         else:
             print('Invalid K value, enter a K between 0 and 3')
             return
