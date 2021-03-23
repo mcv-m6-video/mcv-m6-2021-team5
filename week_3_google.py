@@ -167,9 +167,10 @@ def task_1_1_bis():
             "COCO-InstanceSegmentation/mask_rcnn_X_101_32x8d_FPN_3x.yaml",
             "COCO-InstanceSegmentation/mask_rcnn_R_101_FPN_3x.yaml",
             "COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml"]
-    for mod in models:
-        compute(iteration = 999, output_dir = None, k=k, train = False, validate = True, plot=True, model_name = mod, coco=True)
-    #compute(output_dir = None, k=k, train = False, validate = True, plot=True, model_name = "COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml", coco=True)
+    for iteration in (990, 991, 992, 993):
+        for mod in models:
+            compute(iteration = iteration, output_dir = None, k=k, train = False, validate = True, plot=True, model_name = mod, coco=True)
+        #compute(output_dir = None, k=k, train = False, validate = True, plot=True, model_name = "COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml", coco=True)
 
 
 def task_1_2_bis():
@@ -197,7 +198,7 @@ def compute(iteration, output_dir, k, train, validate, plot = False, model_name 
         print(d)
         print("NAMEEEEEEEEEEEEEEEEEEEEEEEEEEE")
         print(d[0:-4])
-        DatasetCatalog.register("AICity_"+d, lambda d=d: reader.get_dict_from_xml(d[0:-4],K=k))
+        DatasetCatalog.register("AICity_"+d, lambda d=d: reader.get_dict_from_xml(d[0:-2],K=k))
         MetadataCatalog.get("AICity_"+d).set(thing_classes=['car'])
     aicity_metadata = MetadataCatalog.get("AICity_"+d)
 
