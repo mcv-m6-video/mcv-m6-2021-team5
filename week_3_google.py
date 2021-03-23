@@ -167,7 +167,7 @@ def task_1_1_bis():
             "COCO-InstanceSegmentation/mask_rcnn_X_101_32x8d_FPN_3x.yaml",
             "COCO-InstanceSegmentation/mask_rcnn_R_101_FPN_3x.yaml",
             "COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml"]
-    for iteration in (6, 7, 8, 9):
+    for iteration in [6, 7, 8, 9]:
         for mod in models:
             compute(iteration = iteration, output_dir = None, k=k, train = False, validate = True, plot=True, model_name = mod, coco=True)
         #compute(output_dir = None, k=k, train = False, validate = True, plot=True, model_name = "COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml", coco=True)
@@ -176,7 +176,7 @@ def task_1_1_bis():
 def task_1_2_bis():
     #for iteration in (200, 400, 600):
     k = 4
-    for iteration in (4, 7):
+    for iteration in [4, 7]:
         output_dir = 'detectron2_models/faster_rcnn_X_101_32x8d_FPN_3x_KV_' + str(k) + "_" + str(iteration)
         compute(iteration = iteration, output_dir = output_dir, k=k, train = True, validate = True, plot = True, model_name = "COCO-Detection/faster_rcnn_X_101_32x8d_FPN_3x.yaml")
     print(maps)
