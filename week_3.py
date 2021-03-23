@@ -288,6 +288,11 @@ def compute(iteration, output_dir, k, train, validate, plot = False, model_name 
 
 def task_2(model='rcnn',method='overlap'):
 
+    #Load detections
+    detections_filename = 'models/faster_rcnn_X_101_32x8d_FPN_3x_1_400_ours.pkl'
+    with open(detections_filename, 'rb') as f:
+            bb_det = pkl.load(f)
+
     # Load GT
     # Read GT in our format for evaluation
     gt_reader = AnnotationReader(xmlfile)
@@ -302,10 +307,11 @@ def task_2(model='rcnn',method='overlap'):
             boxes.append(box)
         bb_gt.append(boxes)
 
+    #Track detected objects and compare to GT
     if method == 'overlap':
-        track_max_overlap(bb_gt, bb_gt)
+        track_max_overlap(bb_det, bb_gt)
     elif method == 'kalman':
-        track_kalman(bb_gt, bb_gt)
+        track_kalman(bb_det, bb_gt)
     else:
         print('Invalid tracking method: overlap or kalman')
     
@@ -314,8 +320,8 @@ def main():
     # task_1_1()
     # task_1_2()
     # task_1_1_bis()
-    task_1_2_bis()
-    # task_2(method='overlap')
+    # task_1_2_bis()
+    task_2(method='overlap')
     # task_2(method='kalman')
 
 main()
