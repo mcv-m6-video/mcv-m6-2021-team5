@@ -203,7 +203,7 @@ def compute(iteration, output_dir, k, train, validate, plot = False, model_name 
         print(d)
         print("NAMEEEEEEEEEEEEEEEEEEEEEEEEEEE")
         print(d[0:-4])
-        DatasetCatalog.register("AICity_"+d, lambda d=d: reader.get_dict_from_xml(string[l],K=k))
+        DatasetCatalog.register("AICity_"+d, lambda d=d: reader.get_dict_from_xml(d[0:-2],K=k))
         MetadataCatalog.get("AICity_"+d).set(thing_classes=['car'])
         l = l+1
     aicity_metadata = MetadataCatalog.get("AICity_"+d)
