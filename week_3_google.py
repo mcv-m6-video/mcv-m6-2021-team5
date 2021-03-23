@@ -4,7 +4,7 @@ import numpy as np
 import os, cv2, random
 from matplotlib import pyplot as plt
 from tqdm import tqdm
-import pickle as pkl
+from utils.plotting import plot_detections
 
 from detectron2.utils.visualizer import Visualizer
 from detectron2.data import MetadataCatalog, DatasetCatalog
@@ -14,11 +14,10 @@ from detectron2.config import get_cfg
 from detectron2 import model_zoo
 
 from detectron2_tools.io import detectronReader
-from utils.plotting import plot_detections
 from evaluation.ap import mean_average_precision
 from utils.reader import AnnotationReader
 from tracking.tracking import track_max_overlap, track_kalman
-from utils.non_maximum_supression import apply_non_max_supression
+import pickle as pkl
 
 
 xmlfile = "datasets/aicity/ai_challenge_s03_c010-full_annotation.xml" 
@@ -176,7 +175,7 @@ def task_1_1_bis():
 def task_1_2_bis():
     #for iteration in (200, 400, 600):
     k = 4
-    for iteration in (400, 700):
+    for iteration in (4, 7):
         output_dir = 'detectron2_models/faster_rcnn_X_101_32x8d_FPN_3x_KV_' + str(k) + "_" + str(iteration)
         compute(iteration = iteration, output_dir = output_dir, k=k, train = True, validate = True, plot = True, model_name = "COCO-Detection/faster_rcnn_X_101_32x8d_FPN_3x.yaml")
     print(maps)
@@ -310,14 +309,6 @@ def compute(iteration, output_dir, k, train, validate, plot = False, model_name 
 
 def task_2(model='rcnn',method='overlap'):
 
-    #Load detections
-    detections_filename = 'models/faster_rcnn_X_101_32x8d_FPN_3x_1_700_ours.pkl'
-    with open(detections_filename, 'rb') as f:
-            bb_det = pkl.load(f)
-
-    for i, frame_det in enumerate(bb_det):
-        bb_det[i] = apply_non_max_supression(frame_det, i, 0.65)
-
     # Load GT
     # Read GT in our format for evaluation
     gt_reader = AnnotationReader(xmlfile)
@@ -332,11 +323,10 @@ def task_2(model='rcnn',method='overlap'):
             boxes.append(box)
         bb_gt.append(boxes)
 
-    #Track detected objects and compare to GT
     if method == 'overlap':
-        track_max_overlap(bb_det, bb_gt)
+        track_max_overlap(bb_gt, bb_gt)
     elif method == 'kalman':
-        track_kalman(bb_det, bb_gt)
+        track_kalman(bb_gt, bb_gt)
     else:
         print('Invalid tracking method: overlap or kalman')
     
@@ -344,9 +334,9 @@ def task_2(model='rcnn',method='overlap'):
 def main():
     # task_1_1()
     # task_1_2()
-    # task_1_1_bis()
-    # task_1_2_bis()
+    task_1_1_bis()
+    task_1_2_bis()
     # task_2(method='overlap')
-    task_2(method='kalman')
+    # task_2(method='kalman')
 
 main()
