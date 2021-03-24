@@ -70,7 +70,6 @@ In order to preview the different detections in the frames, vdo.avi should be do
 
 `sudo apt-get install python3-tk`
 
-`python -m pip install detectron2 -f \`
   
 ## Execution  :gear:
 The program is executed as follows, for week X:
