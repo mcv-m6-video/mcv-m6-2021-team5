@@ -42,7 +42,7 @@ The task division is as follows:
  - **Task2.1:** Object tracking. Maximum overlap
  - **Task2.2:** Object tracking. Kalman Filter
 
-Detectron2 is the framework used, and GPU availability is important if you want to perform fine-tunning.
+Detectron2 is the framework used, and GPU availability is important if you want to use the models.
 
 ## Installation :wrench:
 ### Frames generation from vdo.avi
