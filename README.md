@@ -31,7 +31,7 @@ The task division is as follows:
  - **Task3:** Comparison with the state of the art
  - **Task4:** Color sequences
 
-## Week 2
+## Week 3
 The goals of this week are:
  - Object detection: evaluate inference detection with off-the-shelf models and fine-tune a model with our data and check if there are improvements
  - Object tracking: implement and compare tracking by maximum overlap and with Kalman Filter
