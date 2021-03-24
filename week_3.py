@@ -315,9 +315,6 @@ def task_2(model='rcnn',method='overlap'):
     with open(detections_filename, 'rb') as f:
             bb_det = pkl.load(f)
 
-    for i, frame_det in enumerate(bb_det):
-        bb_det[i] = apply_non_max_supression(frame_det, i, 0.65)
-
     # Load GT
     # Read GT in our format for evaluation
     gt_reader = AnnotationReader(xmlfile)

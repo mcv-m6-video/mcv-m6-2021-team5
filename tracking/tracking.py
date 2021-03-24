@@ -11,6 +11,7 @@ import pickle as pkl
 from evaluation.iou import iou_bbox, compute_bb_distance
 import motmetrics as mm
 from tracking.sort import Sort
+from utils.non_maximum_supression import apply_non_max_supression
 
 def track_max_overlap(bb_det, bb_gt):
     targets = []
@@ -96,7 +97,7 @@ def track_max_overlap(bb_det, bb_gt):
 
 
 def track_kalman(bb_det, bb_gt):
-    mot_tracker = Sort() #create instance of the SORT tracker
+    mot_tracker = Sort(max_age=2300, min_hits=2, iou_threshold=0.35) #create instance of the SORT tracker
     acc = mm.MOTAccumulator(auto_id=True)
 
     for i, (frame_dets, gt_dets) in enumerate(tqdm(zip(bb_det, bb_gt))):
@@ -106,21 +107,25 @@ def track_kalman(bb_det, bb_gt):
 
         # Update Kalman tracker and obtain new prediction
         # Dets should be an array of bboxes (x1,y1,x2,y2,score)
-        dets = np.array([det.bbox_score for det in frame_dets])
-        #print(dets)
-        #print(np.shape(dets))
+        #dets = np.array([det.bbox_score for det in frame_dets])
+        dets = []
+        for det in frame_dets:
+            if det.score > 0.8:
+                dets.append(det)
+        dets = np.array([det.bbox_score for det in dets])
+
         trackers = mot_tracker.update(dets)
 
         # Draw the image and also put the id
-        for t in trackers:
-            np.random.seed(int(t[4]))
-            c = list(np.random.choice(range(int(256)), size=3)) 
-            color = (int(c[0]), int(c[1]), int(c[2]))
-            cv2.rectangle(im, (int(t[0]),int(t[1])), (int(t[2]), int(t[3])), color, 3) 
-            cv2.putText(im,str(int(t[4])), (int(t[0]),int(t[1])), 
-                        cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2)
+        # for t in trackers:
+        #     np.random.seed(int(t[4]))
+        #     c = list(np.random.choice(range(int(256)), size=3)) 
+        #     color = (int(c[0]), int(c[1]), int(c[2]))
+        #     cv2.rectangle(im, (int(t[0]),int(t[1])), (int(t[2]), int(t[3])), color, 3) 
+        #     cv2.putText(im,str(int(t[4])), (int(t[0]),int(t[1])), 
+        #                 cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2)
         
-        cv2.imwrite('figures/tracking/kalman/frame_' + format(i, '04d') + '.jpg', im) 
+        # cv2.imwrite('figures/tracking/kalman/frame_' + format(i, '04d') + '.jpg', im) 
 
         #Compute distaces and create id arrays
         gt_ids = [gt.id for gt in gt_dets]
