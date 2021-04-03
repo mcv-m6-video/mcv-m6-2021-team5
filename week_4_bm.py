@@ -27,7 +27,11 @@ print(width)
 
 block_size = 64
 # Up-down-right-left pixels to look away from block
-search_border = 16
+search_border = 4
+
+height, width = im_ref.shape[:2]
+
+of_field = np.zeros((height, width, 2), dtype=float)
 
 # Iter rows
 for i in range(0, height - block_size, block_size):
@@ -44,6 +48,9 @@ for i in range(0, height - block_size, block_size):
         target_area = im_target[i_start: i_end, j_start:j_end]
 
         pos = block_matching(ref_block, target_area)
+        # pos = block_matching_show(ref_block, target_area, i, j, block_size)
+
+        # Visualization
         # im_target_show = cv2.rectangle(im_target.copy(),(j_start, i_start), (j_end, i_end), (0,255,0), 2)
         # im_target_show = cv2.rectangle(im_target_show,(j, i), (j + block_size,  i + block_size), (255,0,0), 2)
 
@@ -63,7 +70,11 @@ for i in range(0, height - block_size, block_size):
         print(u)
         print(v)
         
+        of_field[i:i + block_size, j:j + block_size, :] = [u, v]
+
 search_area = (2*search_border + block_size)
 print("Search area: " + str(search_area) + "x" + str(search_area))
+
+print(of_field)
 
 
