@@ -84,6 +84,6 @@ All the generated figures are shown or saved to the the directory `figures/`
 ## Known issues
 The cv2.findContours opencv function has a different number of parameters for different versions of opencv, if this function throws an error, change to opencv 4.2 or later.
 
-### Running optical flow with MaskFlowNet
+### Week 4: Running optical flow with MaskFlowNet
 The following colab link (for anyone with access from upc.edu google suite) shows how to run the MaskFlowNet with the two example images from KITTI:
 https://colab.research.google.com/drive/14kBMx_GR0B_pm1ZwxAhcpNCVSRmmUQF2?usp=sharing
