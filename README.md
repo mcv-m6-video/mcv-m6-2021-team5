@@ -31,6 +31,18 @@ The task division is as follows:
  - **Task3:** Comparison with the state of the art
  - **Task4:** Color sequences
 
+## Week 3
+The goals of this week are:
+ - Object detection: evaluate inference detection with off-the-shelf models and fine-tune a model with our data and check if there are improvements
+ - Object tracking: implement and compare tracking by maximum overlap and with Kalman Filter
+
+The task division is as follows:
+ - **Task1.1:** Object detection. Off-the-shelf inference
+ - **Task1.2:** Object detection. Fine-tune to our data
+ - **Task2.1:** Object tracking. Maximum overlap
+ - **Task2.2:** Object tracking. Kalman Filter
+
+Detectron2 is the framework used, and GPU availability is important if you want to use the models.
 
 ## Installation :wrench:
 ### Frames generation from vdo.avi
@@ -41,14 +53,23 @@ In order to preview the different detections in the frames, vdo.avi should be do
 
 ### Dependencies
 `pip install xmltodict`
+
 `pip install tqdm`
+
 `pip install scipy`
+
 `pip install sklearn`
+
 `pip install motmetrics`
+
 `pip install scikit-image`
+
 `pip install filterpy`
+
 `pip install lap`
+
 `sudo apt-get install python3-tk`
+
   
 ## Execution  :gear:
 The program is executed as follows, for week X:
