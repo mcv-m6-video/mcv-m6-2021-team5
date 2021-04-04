@@ -3,183 +3,95 @@ import glob
 from tqdm import tqdm
 import cv2
 import numpy as np
-from matplotlib import pyplot as plt
 import os
 from PIL import Image
 from utils.flow import *
+import time
 
+import matplotlib
+matplotlib.use('TkAgg')
+import matplotlib.pyplot as plt
 
-def test_kitti_pair():
-    # Flow Options:
-    vis = False
-    rs = None
-    alpha = 0.006
-    ratio = 0.5
-    minWidth = 20
-    nOuterFPIterations = 1
-    nInnerFPIterations = 1
-    nSORIterations = 7
-    colType = 0  # 0 or default:RGB, 1:GRAY (but pass gray image with shape (h,w,1))
+def task_1_2():
+    for seq in ['000045']:
+        # Read images
+        img1 = cv2.imread('./datasets/flow/frames/'+seq+'_10.png', cv2.IMREAD_GRAYSCALE)
+        img2 = cv2.imread('./datasets/flow/frames/'+seq+'_11.png', cv2.IMREAD_GRAYSCALE)
+        gt_noc = read_of('./datasets/flow/gt/flow_noc/'+seq+'_10.png')
+        im1 = np.atleast_3d(img1.astype(float) / 255.)
+        im2 = np.atleast_3d(img2.astype(float) / 255.)
 
-    for seq in ['000045', '000157']:
-
-        im1 = Image.open('../datasets/others/image_0/'+seq+'_10.png')
-        im2 = Image.open('../datasets/others/image_0/'+seq+'_10.png')
-        gt_noc = Image.open('../datasets/flow/gt/flow_noc/'+seq+'_10.png')
-        # gt_occ = Image.open('../datasets/flow/gt/flow_occ/'+seq+'_10.png')
-
-        if rs is not None:
-            im1 = im1.resize(rs)
-            im2 = im2.resize(rs)
-
-        im1 = np.array(im1)
-        im2 = np.array(im2)
-
-        im1 = im1.astype(float) / 255.
-        im2 = im2.astype(float) / 255.
-
+        # Pyflow
+        alpha = 0.012
+        ratio = 0.75
+        minWidth = 20
+        nOuterFPIterations = 7
+        nInnerFPIterations = 1
+        nSORIterations = 30
+        colType = 1 
+        tic = time.time()
         u, v, im2W = pyflow.coarse2fine_flow(
         im1, im2, alpha, ratio, minWidth, nOuterFPIterations, nInnerFPIterations,
         nSORIterations, colType)
-        flow = np.concatenate((u[..., None], v[..., None]), axis=2)
+        flow_pyflow = np.dstack((u, v))
+        toc = time.time()
+        t_pyflow = toc-tic
+
+        # Pyflow (fast)
+        alpha = 0.012
+        ratio = 0.5
+        minWidth = 20
+        nOuterFPIterations = 1
+        nInnerFPIterations = 1
+        nSORIterations = 15
+        colType = 1 
+        tic = time.time()
+        u, v, im2W = pyflow.coarse2fine_flow(
+        im1, im2, alpha, ratio, minWidth, nOuterFPIterations, nInnerFPIterations,
+        nSORIterations, colType)
+        flow_pyflow_fast = np.dstack((u, v))
+        toc = time.time()
+        t_pyflow_fast = toc-tic
+
+        # Farneback (openCV)
+        tic = time.time()
+        flow_farneback = cv2.calcOpticalFlowFarneback(img1, img2, flow=None, pyr_scale=0.5, levels=3, winsize=15, iterations=3,
+                                        poly_n=5, poly_sigma=1.2, flags=0)
+        toc = time.time()
+        t_farneback = toc-tic
         
-        msen, pepn, of_error1 = compute_of_metrics(flow, gt_noc)
-        print("Sequence "+seq+"  -- MSEN: " + str(msen) + " | PEPN: " + str(pepn))
+        # Compute metrics
+        msen, pepn, _ = compute_of_metrics(flow_pyflow, gt_noc)
+        print("Pyflow: -- Time: " + str(t_pyflow)  + " | MSEN: " + str(msen) + " | PEPN: " + str(pepn))
 
-        if vis:
-            hsv = np.zeros(im1.shape, dtype=np.uint8)
-            hsv[:, :, 0] = 255
-            hsv[:, :, 1] = 255
-            mag, ang = cv2.cartToPolar(flow[..., 0], flow[..., 1])
-            hsv[..., 0] = ang * 180 / np.pi / 2
-            hsv[..., 2] = cv2.normalize(mag, None, 0, 255, cv2.NORM_MINMAX)
-            rgb = cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR)
+        msen, pepn, _ = compute_of_metrics(flow_pyflow_fast, gt_noc)
+        print("Pyflow: -- Time: " + str(t_pyflow_fast)  + " | MSEN: " + str(msen) + " | PEPN: " + str(pepn))
 
-            plt.figure(1)
-            plt.subplot(311)
-            plt.imshow(rgb)
-            plt.subplot(312)
-            plt.imshow(im2W[:, :, ::-1] * 255)
-            plt.subplot(313)
-            plt.imshow(im1 - im2W[:, :, ::-1])
-            plt.show()
+        msen, pepn, _ = compute_of_metrics(flow_farneback, gt_noc)
+        print("Farneback: -- Time: " + str(t_farneback) + " | MSEN: " + str(msen) + " | PEPN: " + str(pepn))
+        
+        pyflow_hsv = hsv_plot(flow_pyflow)
+        pyflow_fast_hsv = hsv_plot(flow_pyflow_fast)
+        farneback_hsv = hsv_plot(flow_farneback)
+        maxx = (np.max(np.max(farneback_hsv)))
+        minn = (np.min(np.min(farneback_hsv)))
 
-            #cv2.imwrite('../FLOW/flow/frame_'+str(i).zfill(4)+'.png', rgb)
-            #cv2.imwrite('../FLOW/mc/frame_'+str(i).zfill(4)+'.png', im2W[:, :, ::-1] * 255)
-            #cv2.imwrite('../FLOW/err/frame_'+str(i).zfill(4)+'.png', im1 - im2W[:, :, ::-1] * 255)
+        fig = plt.figure()
+        plt.subplot(311)
+        plt.imshow(np.array(pyflow_hsv))
+        plt.subplot(312)
+        plt.imshow(np.array(pyflow_fast_hsv))
+        plt.subplot(313)
+        plt.imshow(np.array(farneback_hsv))
+        plt.show()
 
-
-def test_kitti_full_seq():
-    # Flow Options:
-    vis = False
-    rs = (640,360)
-    alpha = 0.006
-    ratio = 0.5
-    minWidth = 20
-    nOuterFPIterations = 1
-    nInnerFPIterations = 1
-    nSORIterations = 7
-    colType = 0  # 0 or default:RGB, 1:GRAY (but pass gray image with shape (h,w,1))
-
-    # Read the frames
-    img_path = '../datasets/aicity/AICity_data/train/S03/c010/frames/'
-    img_list = sorted(glob.glob(os.path.join(img_path,'frame_*.png')))
-
-    # Compute optical flow for each frame pair
-    for i in tqdm(range(len(img_list)-1)) :
-
-        im1 = Image.open(img_list[i])
-        im2 = Image.open(img_list[i+1])
-
-        if rs is not None:
-            im1 = im1.resize(rs)
-            im2 = im2.resize(rs)
-
-        im1 = np.array(im1)
-        im2 = np.array(im2)
-
-        im1 = im1.astype(float) / 255.
-        im2 = im2.astype(float) / 255.
-
-        u, v, im2W = pyflow.coarse2fine_flow(
-        im1, im2, alpha, ratio, minWidth, nOuterFPIterations, nInnerFPIterations,
-        nSORIterations, colType)
-        flow = np.concatenate((u[..., None], v[..., None]), axis=2)
-
-        if vis:
-            hsv = np.zeros(im1.shape, dtype=np.uint8)
-            hsv[:, :, 0] = 255
-            hsv[:, :, 1] = 255
-            mag, ang = cv2.cartToPolar(flow[..., 0], flow[..., 1])
-            hsv[..., 0] = ang * 180 / np.pi / 2
-            hsv[..., 2] = cv2.normalize(mag, None, 0, 255, cv2.NORM_MINMAX)
-            rgb = cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR)
-            cv2.imwrite('../FLOW/flow/frame_'+str(i).zfill(4)+'.png', rgb)
-            cv2.imwrite('../FLOW/mc/frame_'+str(i).zfill(4)+'.png', im2W[:, :, ::-1] * 255)
-            cv2.imwrite('../FLOW/err/frame_'+str(i).zfill(4)+'.png', im1 - im2W[:, :, ::-1] * 255)
-
-def aicity_gif_generation():
-    # Flow Options:
-    vis = False
-    rs = (640,360)
-    alpha = 0.006
-    ratio = 0.5
-    minWidth = 20
-    nOuterFPIterations = 1
-    nInnerFPIterations = 1
-    nSORIterations = 7
-    colType = 0  # 0 or default:RGB, 1:GRAY (but pass gray image with shape (h,w,1))
-
-    # Read the frames
-    img_path = '../datasets/aicity/AICity_data/train/S03/c010/frames/'
-    img_list = sorted(glob.glob(os.path.join(img_path,'frame_*.png')))
-
-    # Compute optical flow for each frame pair
-    for i in tqdm(range(len(img_list)-1)) :
-
-        im1 = Image.open(img_list[i])
-        im2 = Image.open(img_list[i+1])
-
-        if rs is not None:
-            im1 = im1.resize(rs)
-            im2 = im2.resize(rs)
-
-        im1 = np.array(im1)
-        im2 = np.array(im2)
-
-        im1 = im1.astype(float) / 255.
-        im2 = im2.astype(float) / 255.
-
-        u, v, im2W = pyflow.coarse2fine_flow(
-        im1, im2, alpha, ratio, minWidth, nOuterFPIterations, nInnerFPIterations,
-        nSORIterations, colType)
-        flow = np.concatenate((u[..., None], v[..., None]), axis=2)
-
-        if vis:
-            hsv = np.zeros(im1.shape, dtype=np.uint8)
-            hsv[:, :, 0] = 255
-            hsv[:, :, 1] = 255
-            mag, ang = cv2.cartToPolar(flow[..., 0], flow[..., 1])
-            hsv[..., 0] = ang * 180 / np.pi / 2
-            hsv[..., 2] = cv2.normalize(mag, None, 0, 255, cv2.NORM_MINMAX)
-            rgb = cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR)
-            
-            plt.figure(1)
-            plt.subplot(311)
-            plt.imshow(rgb)
-            plt.subplot(312)
-            plt.imshow(im2W[:, :, ::-1] * 255)
-            plt.subplot(313)
-            plt.imshow(im1 - im2W[:, :, ::-1])
-            plt.show()
-
-            # cv2.imwrite('../FLOW/flow/frame_'+str(i).zfill(4)+'.png', rgb)
-            # cv2.imwrite('../FLOW/mc/frame_'+str(i).zfill(4)+'.png', im2W[:, :, ::-1] * 255)
-            # cv2.imwrite('../FLOW/err/frame_'+str(i).zfill(4)+'.png', im1 - im2W[:, :, ::-1] * 255)
-
-
+def task_3_1():
+    print('TODO')
 
 def main():
-    test_kitti_pair()
+    print('Starting task 1.2: SOTA Optical Flow...')
+    task_1_2()
 
+    print('Starting task 3.1: Tracking with OF...')
+    task_3_1()
 main()

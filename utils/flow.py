@@ -134,3 +134,14 @@ def hist_of_error(of_error, mask=None, filename=None):
     plt.figure()
     plt.hist(of_error.ravel(), bins=50)
     plt.savefig("figures/hist_" + filename + ".png")
+
+
+def hsv_plot(flow):
+    w,h,_ = flow.shape
+    hsv = np.zeros((w,h,3), dtype=np.uint8)
+    hsv[..., 1] = 255
+    mag, ang = cv2.cartToPolar(flow[..., 0], flow[..., 1])
+    hsv[..., 0] = ang * 180 / np.pi / 2
+    hsv[..., 2] = cv2.normalize(mag, None, 0, 255, cv2.NORM_MINMAX)
+    rgb = cv2.cvtColor(hsv, cv2.COLOR_HSV2RGB)
+    return rgb
