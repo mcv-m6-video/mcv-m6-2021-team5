@@ -6,12 +6,16 @@ from skimage.feature import match_template
 color1_path = "datasets/others/colored_0/000157_10.png"
 im_target = cv2.imread(color1_path, cv2.IMREAD_COLOR)
 
-def compute_dist(ref_b, target_b, method = 'euclidean'):
+def compute_dist(ref_b, target_b, method = "SSD"):
 
-    if method == 'euclidean':
-        distance = np.sqrt(np.sum((target_b - ref_b) ** 2))
-    if method == 'SSD':
-        return np.sum((target_b - ref_b) ** 2)
+    if method == "SSD":
+        distance = np.sum((target_b - ref_b) ** 2)
+    if method == "SAD":
+        distance = np.sum(np.abs(target_b - ref_b))
+    if method == 'MSE':
+        distance = np.mean((target_b - ref_b) ** 2)
+    if method == 'MAD':
+        distance = np.mean(np.abs(target_b - ref_b))
     return distance
 
 def block_matching_block_show(ref_block, target_area, i_start_area, j_start_area, im_ref_show):
@@ -42,25 +46,27 @@ def block_matching_block_show(ref_block, target_area, i_start_area, j_start_area
     return arg_min_dist
 
 
-def block_matching_block(ref_block, target_area):
+def block_matching_block(ref_block, target_area, method):
     height_ref = ref_block.shape[0]
     width_ref = ref_block.shape[1]
     min_dist = np.zeros(shape=(target_area.shape[0] - height_ref, target_area.shape[1] - width_ref))
-    # print(min_dist.shape)
+
     # Exhaustive search
-    for i in range(0, target_area.shape[0] - height_ref):
-        for j in range(0, target_area.shape[1] - width_ref):
-            target_block = target_area[i: i + height_ref, j: j + width_ref]
-            
-            dist = compute_dist(ref_block, target_block)
+    if method == "SSD" or method == "SAD" or method == "MSE" or method == "MAD":
+        for i in range(0, target_area.shape[0] - height_ref):
+            for j in range(0, target_area.shape[1] - width_ref):
+                target_block = target_area[i: i + height_ref, j: j + width_ref]
+                
+                dist = compute_dist(ref_block, target_block, method)
 
-            min_dist[i, j] = dist
-    
-    arg_min_dist = np.unravel_index(np.argmin(min_dist, axis=None), min_dist.shape)
+                min_dist[i, j] = dist
+        
+        arg_min_dist = np.unravel_index(np.argmin(min_dist, axis=None), min_dist.shape)
 
-    # # normalized correlation
-    # corr = match_template(target_area, ref_block)
-    # arg_min_dist = np.unravel_index(np.argmin(corr, axis=None), corr.shape)
+    # Match template
+    if method == "template":
+        corr = match_template(target_area, ref_block)
+        arg_min_dist = np.unravel_index(np.argmin(corr, axis=None), corr.shape)
 
     return arg_min_dist
 
