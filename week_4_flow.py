@@ -3,17 +3,17 @@ import glob
 from tqdm import tqdm
 import cv2
 import numpy as np
-from matplotlib import pyplot as plt
 import os
 from PIL import Image
 from utils.flow import *
 import time
 
+import matplotlib
+matplotlib.use('TkAgg')
+import matplotlib.pyplot as plt
 
-def test_kitti_pair():
-
+def task_1_2():
     for seq in ['000045']:
-
         # Read images
         img1 = cv2.imread('./datasets/flow/frames/'+seq+'_10.png', cv2.IMREAD_GRAYSCALE)
         img2 = cv2.imread('./datasets/flow/frames/'+seq+'_11.png', cv2.IMREAD_GRAYSCALE)
@@ -70,9 +70,28 @@ def test_kitti_pair():
         msen, pepn, _ = compute_of_metrics(flow_farneback, gt_noc)
         print("Farneback: -- Time: " + str(t_farneback) + " | MSEN: " + str(msen) + " | PEPN: " + str(pepn))
         
+        pyflow_hsv = hsv_plot(flow_pyflow)
+        pyflow_fast_hsv = hsv_plot(flow_pyflow_fast)
+        farneback_hsv = hsv_plot(flow_farneback)
+        maxx = (np.max(np.max(farneback_hsv)))
+        minn = (np.min(np.min(farneback_hsv)))
 
+        fig = plt.figure()
+        plt.subplot(311)
+        plt.imshow(np.array(pyflow_hsv))
+        plt.subplot(312)
+        plt.imshow(np.array(pyflow_fast_hsv))
+        plt.subplot(313)
+        plt.imshow(np.array(farneback_hsv))
+        plt.show()
+
+def task_3_1():
+    print('TODO')
 
 def main():
-    test_kitti_pair()
+    print('Starting task 1.2: SOTA Optical Flow...')
+    task_1_2()
 
+    print('Starting task 3.1: Tracking with OF...')
+    task_3_1()
 main()
