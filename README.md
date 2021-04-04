@@ -70,6 +70,8 @@ In order to preview the different detections in the frames, vdo.avi should be do
 
 `sudo apt-get install python3-tk`
 
+`pip install scikit-image`
+
   
 ## Execution  :gear:
 The program is executed as follows, for week X:
