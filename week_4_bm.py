@@ -39,7 +39,7 @@ def block_matching(img_past, img_future, estimation_dir, block_size, search_bord
             v = pos[0] - (i - i_start_area)
 
             # Save the optical flow (all pixels are considered as valid: last axis = 1)
-            of[i:i + block_size, j:j + block_size, :] = [u, v, 1]
+            of[i:i + block_size, j:j + block_size, :] = [-u, -v, 1]
 
             # Plots reference block, search area, and block in target image with minimum distance
             im_target_show = cv2.rectangle(im_target.copy(),(pos[1] + j_start_area, pos[0] + i_start_area), (pos[1] + j_start_area + block_size, pos[0] + i_start_area + block_size), (255,0, 0), 2) # Plot blue block: block with minimum distance
