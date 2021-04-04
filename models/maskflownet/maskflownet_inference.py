@@ -102,7 +102,8 @@ with torch.no_grad():
     up_occ_mask = F.interpolate(up_occ_mask, size=[shape[2], shape[3]], mode='bilinear')
   toc = time.time()
 
-  final_flow = np.array(up_flow.flip(1).to('cpu')[0])
+  final_flow = up_flow.flip(1).to('cpu')[0]
+  final_flow = np.array(final_flow.permute(1,2,0))
   hsv = np.zeros(img0.shape, dtype=np.uint8)
   hsv[..., 1] = 255
   mag, ang = cv2.cartToPolar(final_flow[..., 0], final_flow[..., 1])
