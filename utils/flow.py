@@ -83,7 +83,7 @@ def plot_of_error(of_error, filename):
     plt.axis('off')
     plt.savefig("figures/error_" + filename + ".png", bbox_inches='tight', pad_inches=0, dpi=250)
 
-def arrow_of_plot(flow, img, filename): 
+def arrow_of_plot(flow, img, filename, custom_scale=True): 
     height = np.shape(flow[:,:,0])[0]
     width = np.shape(flow[:,:,0])[1]
 
@@ -94,12 +94,16 @@ def arrow_of_plot(flow, img, filename):
     V = flow[::step,::step,1]
     M = np.hypot(U, V)
     
-    scale = 10*(U.max() + V.max())
-
     # Plot
     plt.figure()
     plt.axis('off')
-    Q = plt.quiver(X, Y, U, V, M, color='red', angles='xy', scale=scale)
+
+    if custom_scale:
+        scale = 10*(U.max() + V.max())
+        Q = plt.quiver(X, Y, U, V, M, color='red', angles='xy', scale=scale)
+    else:
+        Q = plt.quiver(X, Y, U, V, M, color='red', angles='xy')
+        
     plt.imshow(img)
     plt.savefig("figures/arrows_" + filename + ".png", bbox_inches='tight', pad_inches=0, dpi=250)
 
@@ -109,12 +113,16 @@ def arrow_of_plot(flow, img, filename):
     V[M>clip_th] = V[M>clip_th]*0.3
     M = np.hypot(U, V)
     
-    scale = 10*(U.max() + V.max())
-
     # Plot
     plt.figure()
     plt.axis('off')
-    Q = plt.quiver(X, Y, U, V, M, color='red', angles='xy', scale=scale)
+
+    if custom_scale:
+        scale = 10*(U.max() + V.max())
+        Q = plt.quiver(X, Y, U, V, M, color='red', angles='xy', scale=scale)
+    else:
+        Q = plt.quiver(X, Y, U, V, M, color='red', angles='xy')
+
     plt.imshow(img)
     plt.savefig("figures/arrows_clipped_" + filename + ".png", bbox_inches='tight', pad_inches=0, dpi=250)
 
