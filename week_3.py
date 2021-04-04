@@ -343,7 +343,7 @@ def main():
     # task_1_2()
     # task_1_1_bis()
     # task_1_2_bis()
-    # task_2(method='overlap')
-    task_2(method='kalman')
+    task_2(method='overlap')
+    # task_2(method='kalman')
 
 main()

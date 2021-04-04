@@ -23,6 +23,14 @@ def track_max_overlap(bb_det, bb_gt):
         img_path = './datasets/aicity/AICity_data/train/S03/c010/frames/frame_' + str(frame_dets[0].frame+1).zfill(4) + '.png'
         im = cv2.imread(img_path, cv2.IMREAD_COLOR)
 
+        # dets = []
+        # for det in frame_dets:
+        #     if det.score > 0.7:
+        #         dets.append(det)
+        # frame_dets = dets
+
+        # frame_dets = apply_non_max_supression(frame_dets, i, 0.9)
+
         new_targets = []
         if targets == []:
             # Store the targets of the first frame

@@ -2,11 +2,11 @@ import numpy as np
 from utils.bb import BB
 
 def apply_non_max_supression(detections, frame_number, overlapThresh):
-    boxes = [bb.bbox for bb in detections]
+    boxes = [bb.bbox_score for bb in detections]
     new_boxes = non_max_suppression_fast(np.array(boxes), overlapThresh)
     new_bb = []
     for box in new_boxes:
-        bb = BB(frame_number, 0, 'car', float(box[0]), float(box[1]), float(box[2]), float(box[3]), 1.0)       
+        bb = BB(frame_number, 0, 'car', float(box[0]), float(box[1]), float(box[2]), float(box[3]), float(box[4]))       
         new_bb.append(bb)
     return new_bb
 
@@ -29,6 +29,7 @@ def non_max_suppression_fast(boxes: np.array, overlapThresh: float):
     ytl = boxes[:,1]
     xbr = boxes[:,2]
     ybr = boxes[:,3]
+    scores = boxes[:,4]
 
     # compute the area of the bounding boxes and sort the bounding
     # boxes by the bottom-right y-coordinate of the bounding box
@@ -57,6 +58,10 @@ def non_max_suppression_fast(boxes: np.array, overlapThresh: float):
         # compute the ratio of overlap
         overlap = (w * h) / area[idxs[:last]]
         # delete all indexes from the index list that have
+        candidate_idxs = np.concatenate(([last], np.where(overlap > overlapThresh)[0]))
+        score = max(scores[candidate_idxs])
+        boxes[i,4] = score
+
         idxs = np.delete(idxs, np.concatenate(([last],
             np.where(overlap > overlapThresh)[0])))
 
