@@ -7,6 +7,7 @@ import torch.nn.functional as F
 from PIL import Image
 import cv2
 from matplotlib import pyplot as plt
+import time
 
 import config_folder as cf
 from data_loaders.Chairs import Chairs
@@ -29,6 +30,16 @@ def read_of(flow_path):
     flow_u[~flow_valid] = 0
     flow_v[~flow_valid] = 0
     return np.stack((flow_u, flow_v, flow_valid), axis=2)
+
+def compute_of_metrics(flow, gt):
+    square_error_matrix = (flow[:,:,0:2] - gt[:,:,0:2]) ** 2
+    square_error_matrix_valid = square_error_matrix*np.stack((gt[:,:,2],gt[:,:,2]),axis=2)
+    non_occluded_pixels = np.sum(gt[:,:,2] != 0)
+    pixel_error_matrix = np.sqrt(np.sum(square_error_matrix_valid, axis= 2))
+    msen = (1/non_occluded_pixels) * np.sum(pixel_error_matrix)
+    erroneous_pixels = np.sum(pixel_error_matrix > 3)
+    pepn = erroneous_pixels/non_occluded_pixels
+    return msen, pepn, pixel_error_matrix
 
 parser = argparse.ArgumentParser()
 
@@ -59,12 +70,10 @@ net = net.to(device)
 
 
 # Read images
-im0 = np.array(Image.open('/content/000045_10.png'))
-im1 = np.array(Image.open('/content/000045_11.png'))
-im0 = torch.cuda.FloatTensor(np.expand_dims(im0,0)).to(device)
-im1 = torch.cuda.FloatTensor(np.expand_dims(im1,0)).to(device)
-print(np.shape(im0))
-print(np.shape(im1))
+img0 = np.array(Image.open('/content/000045_10.png'))
+img1 = np.array(Image.open('/content/000045_11.png'))
+im0 = torch.cuda.FloatTensor(np.expand_dims(img0/255.,0)).to(device)
+im1 = torch.cuda.FloatTensor(np.expand_dims(img1/255.,0)).to(device)
 gt_noc = read_of('/content/000045_10_gt.png')
 
 with torch.no_grad():
@@ -81,7 +90,7 @@ with torch.no_grad():
 
   im0 = im0.to(device)
   im1 = im1.to(device)
-
+  tic = time.time()
   pred, flows, warpeds = net(im0, im1)
 
   up_flow = Upsample(pred[-1], 4)
@@ -91,7 +100,19 @@ with torch.no_grad():
     up_flow = F.interpolate(up_flow, size=[shape[2], shape[3]], mode='bilinear') * \
               torch.tensor([shape[d] / up_flow.shape[d] for d in (2, 3)], device=device).view(1, 2, 1, 1)
     up_occ_mask = F.interpolate(up_occ_mask, size=[shape[2], shape[3]], mode='bilinear')
+  toc = time.time()
 
-  final_flow = up_flow.flip(1).to('cpu')
-  plt.imshow(final_flow)
+  final_flow = np.array(up_flow.flip(1).to('cpu')[0])
+  hsv = np.zeros(img0.shape, dtype=np.uint8)
+  hsv[..., 1] = 255
+  mag, ang = cv2.cartToPolar(final_flow[..., 0], final_flow[..., 1])
+  hsv[..., 0] = ang * 180 / np.pi / 2
+  hsv[..., 2] = cv2.normalize(mag, None, 0, 255, cv2.NORM_MINMAX)
+  rgb = cv2.cvtColor(hsv, cv2.COLOR_HSV2RGB)
+  fig = plt.figure()
+  plt.imshow(rgb)
+  fig.savefig('/content/flow.jpg')
   plt.show()
+
+  msen, pepn, _ = compute_of_metrics(final_flow, gt_noc)
+  print("MaskFlowNet: -- Time: " + str(toc-tic) + " | MSEN: " + str(msen) + " | PEPN: " + str(pepn))
