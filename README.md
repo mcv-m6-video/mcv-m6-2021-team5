@@ -84,9 +84,6 @@ All the generated figures are shown or saved to the the directory `figures/`
 ## Known issues
 The cv2.findContours opencv function has a different number of parameters for different versions of opencv, if this function throws an error, change to opencv 4.2 or later.
 
-### Installing pytorch + detectron (CPU only)
-`pip install torch==1.7.1+cpu torchvision==0.8.2+cpu torchaudio==0.7.2 -f https://download.pytorch.org/whl/torch_stable.html`
-  
-`pip install detectron2 -f https://dl.fbaipublicfiles.com/detectron2/wheels/cpu/torch1.7/index.html`
-
-
+### Running optical flow with MaskFlowNet
+The following colab link (for anyone with access from upc.edu google suite) shows how to run the MaskFlowNet with the two example images from KITTI:
+https://colab.research.google.com/drive/14kBMx_GR0B_pm1ZwxAhcpNCVSRmmUQF2?usp=sharing
