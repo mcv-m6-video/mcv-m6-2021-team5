@@ -1,10 +1,53 @@
 import cv2
 import numpy as np
 from skimage.feature import match_template
+from tqdm import tqdm
 
 # Read target image
 color1_path = "datasets/others/colored_0/000157_10.png"
 im_target = cv2.imread(color1_path, cv2.IMREAD_COLOR)
+
+def block_matching(img_past, img_future, estimation_dir, block_size, search_border, method):
+    height, width = img_past.shape[:2]
+    of = np.zeros((height, width, 2), dtype=float)
+
+    # Define reference/target image
+    if estimation_dir == "backward":
+        im_ref = img_future
+        im_target = img_past
+    elif estimation_dir == "forward":
+        im_ref = img_past
+        im_target = img_future
+
+    # Iter rows
+    for i in tqdm(range(0, height - block_size, block_size)):
+        # Iter cols
+        for j in range(0, width - block_size, block_size):
+
+            # Crop reference block and target area to search
+            i_start_area = max(i - search_border, 0)
+            j_start_area = max(j - search_border, 0)
+
+            i_end =  min(i + block_size + search_border, height)
+            j_end = min(j + block_size + search_border, width)
+
+            ref_block = im_ref[i: i + block_size, j: j + block_size]
+            target_area = im_target[i_start_area: i_end, j_start_area:j_end]
+
+            # Obtain the position of the block with lower distance
+            pos = block_matching_block(ref_block, target_area, method)
+
+            # Scale position to image axis
+            u = pos[1] - (j - j_start_area)
+            v = pos[0] - (i - i_start_area)
+
+            # Save the optical flow (all pixels are considered as valid: last axis = 1)
+            if estimation_dir == "backward":
+                of[i:i + block_size, j:j + block_size, :] = [-u, -v]
+            if estimation_dir == "forward":
+                of[i:i + block_size, j:j + block_size, :] = [u, v]
+    return of
+
 
 def compute_dist(ref_b, target_b, method = "SSD"):
 
