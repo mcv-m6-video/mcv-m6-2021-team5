@@ -45,4 +45,4 @@ class BB:
         self.ybr = new_bbox.ybr
     
     def increase_missed_bbox(self):
-        self.misses += 1
+        self.missed += 1
