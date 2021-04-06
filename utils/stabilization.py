@@ -69,6 +69,7 @@ def stb_frame_of(frame, estimated_of, w, h):
 def apply_camera_motion(frame, optical_flow, w, h, acc_t, method='average'):
 
     if method == 'average':
+        print("AVERageeeeee")
         # Average
         average_optical_flow = - np.array(optical_flow.mean(axis=0).mean(axis=0), dtype=np.float32)
         acc_t += average_optical_flow
@@ -87,7 +88,4 @@ def apply_camera_motion(frame, optical_flow, w, h, acc_t, method='average'):
         H = np.float32([[1, 0, acc_t[0]], [0, 1, acc_t[1]]])
         frame_stabilized = cv2.warpAffine(frame, H, (w, h))
 
-    else:
-        raise ValueError('Camera motion method not valid.')
-    
     return frame_stabilized, acc_t
