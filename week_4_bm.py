@@ -103,17 +103,18 @@ def task1():
     # Compute optical flow
     estimation_dir = ["backward", "forward"]
     block_size = [4, 8, 16, 32, 64]
-    search_border = [4, 8, 16, 32, 64, 128] # Up-down-right-left pixels to look away from block
+    search_border = [2, 4, 8, 16, 32] # Up-down-right-left pixels to look away from block
     search_area = (2*search_border + block_size)
-    method = ["SSD", "SAD", "MSE", "MAD", "template"]
+    method = ["SSD", "SAD", "MSE", "MAD", "template", "template1", "template2", "template3", "template4", "template5", "template6"]
     results = []
 
     for direc in estimation_dir:
         for blk in block_size:
             for bor in search_border:
                 for met in method:
-                    print("NEW ITERATION: \n\tEstimation direction: ", direc, "\n\tBlock size: ", blk, "\n\tSearch border: ", bor, "\n\tMethod: ", met, file = f)
-                    print("NEW ITERATION: \n\tEstimation direction: ", direc, "\n\tBlock size: ", blk, "\n\tSearch border: ", bor, "\n\tMethod: ", met)
+                    sa = (2*bor + blk)
+                    print("NEW ITERATION: \n\tEstimation direction: ", direc, "\n\tBlock size: ", blk, "\n\tSearch border: ", bor, "\n\tSearch area: ", sa, "\n\tMethod: ", met, file = f)
+                    print("NEW ITERATION: \n\tEstimation direction: ", direc, "\n\tBlock size: ", blk, "\n\tSearch border: ", bor, "\n\tSearch area: ", sa, "\n\tMethod: ", met)
                     start_time = time.time()
                     estimated_of = block_matching(img_past, img_future, direc, blk, bor, met)
                     end_time = time.time()
@@ -121,7 +122,7 @@ def task1():
                     print("Elapsed time: ", end_time - start_time)
 
                     # Compute metrics
-                    filename = "bm_" + str(direc) + "_" + str(blk) + "_" + str(bor) + "_" + str(met)
+                    filename = "bm_" + str(direc) + "_" + str(blk) + "_" + str(bor) + "_" + str(sa) + "_" + str(met)
                     dense_of_plot(estimated_of, img_past, filename)
                     arrow_of_plot(estimated_of, img_past, filename, custom_scale=False)
                     msen, pepn, of_error1 = compute_of_metrics(estimated_of, gt_of)
@@ -134,7 +135,7 @@ def task1():
                     print("PEPN: ", pepn)
                     print("---------------------")
 
-                    results.append([direc, blk, bor, met, end_time - start_time, msen, pepn])
+                    results.append([direc, blk, bor, sa, met, end_time - start_time, msen, pepn])
                     print(results, file = f)
                     print(results)
 
