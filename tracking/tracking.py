@@ -8,24 +8,40 @@ import shutil
 from tqdm import tqdm
 from utils.bb import BB
 import pickle as pkl
+import flowpy
 from evaluation.iou import iou_bbox, compute_bb_distance
 import motmetrics as mm
 from tracking.sort import Sort
 from utils.non_maximum_supression import apply_non_max_supression
+from utils.plotting import plot_detections
 
 def remove_missed_targets(targets, max_misses=2):
     cleaned_targets = []
     for target in targets:
         if target.missed <= max_misses:
             cleaned_targets.append(target)
+        else:
+            print('Eliminating target!')
     return cleaned_targets
 
-def predict_targets(targets, frame_of):
-    predicted_targets = []
+def predict_targets(targets, flow, momentum=3):
+    predicted_targets = [] 
+    for t in targets:
+        box_flow = flow[int(t.ytl):int(t.ybr), int(t.xtl):int(t.xbr)]
+        box_flow = momentum*box_flow
+        avg_flow = np.mean(box_flow, axis=(0,1))
+        predicted = BB(t.frame, t.id, t.label, t.xtl - avg_flow[1], t.ytl - avg_flow[0],
+                       t.xbr - avg_flow[1], t.ybr - avg_flow[0], t.score)
+        predicted_targets.append(predicted)
+    return predicted_targets
+
+def add_new_target(query, targets):
     for target in targets:
-        #update bbox using frame_of
-        continue
-    return 
+        if iou_bbox(query.bbox, target.bbox) > 0.95:
+            return targets
+    targets.append(query)
+    return targets
+
 
 def track_max_overlap(bb_det, bb_gt):
     targets = []
@@ -34,7 +50,7 @@ def track_max_overlap(bb_det, bb_gt):
 
     for i, (frame_dets, gt_dets) in enumerate(tqdm(zip(bb_det, bb_gt))):
 
-        img_path = './datasets/aicity/AICity_data/train/S03/c010/frames/frame_' + str(frame_dets[0].frame+1).zfill(4) + '.png'
+        img_path = './datasets/aicity/AICity_data/train/S03/c010/frames/frame_' + str(frame_dets[0].frame-1).zfill(4) + '.png'
         im = cv2.imread(img_path, cv2.IMREAD_COLOR)
 
         # dets = []
@@ -116,14 +132,15 @@ def track_max_overlap(bb_det, bb_gt):
     print(summary)
     return summary
 
-def track_max_overlap_of(bb_det, bb_gt, of):
+def track_max_overlap_of(bb_det, bb_gt, iou_threshold=0.2):
     targets = []
     track_id = 0
     acc = mm.MOTAccumulator(auto_id=True)
+    for i, (frame_dets, gt_dets) in enumerate(zip(bb_det, bb_gt)):
 
-    for i, (frame_dets, gt_dets, frame_of) in enumerate(tqdm(zip(bb_det, bb_gt, of))):
-
-        img_path = './datasets/aicity/AICity_data/train/S03/c010/frames/frame_' + str(frame_dets[0].frame+1).zfill(4) + '.png'
+        print(str(gt_dets[0].frame+1).zfill(4))
+        img_path = './datasets/aicity/AICity_data/train/S03/c010/frames/frame_' + str(gt_dets[0].frame+1).zfill(4) + '.png'
+        flow = flowpy.flow_read('./datasets/aicity/AICity_data/train/S03/c010/of/frame_'+ str(gt_dets[0].frame+1).zfill(4) +'.png')
         im = cv2.imread(img_path, cv2.IMREAD_COLOR)
 
         new_targets = []
@@ -136,9 +153,10 @@ def track_max_overlap_of(bb_det, bb_gt, of):
 
         else:
             #Remove targets that gave been missed multiple times
-            targets = remove_missed_targets(targets, max_misses=2) 
+            targets = remove_missed_targets(targets, max_misses=4) 
+
             #Predict new targets using OF (always assuming forward direction)
-            predicted_targets = predict_targets(targets, frame_of)
+            predicted_targets = predict_targets(targets, flow)
             
             for target in targets:  
                 #Max overlap of detections and target over targets, update bbox
@@ -147,11 +165,12 @@ def track_max_overlap_of(bb_det, bb_gt, of):
                     candidates.append(iou_bbox(detection.bbox, target.bbox))
                 
                 # If the maximum overlap is not zero, already existing target, update box, keep id
-                if np.max(candidates)!=0:
+                if np.max(candidates)>=iou_threshold:
                     best_match_index = np.argmax(candidates)
                     d = frame_dets[best_match_index]
                     target.update_bbox(d)
-                    new_targets.append(target)
+                    target.missed = 0
+                    new_targets = add_new_target(target, new_targets)
 
                 else:
                     #Max overlap of target and predictions
@@ -161,24 +180,27 @@ def track_max_overlap_of(bb_det, bb_gt, of):
                     
                     # If the maximum overlap is not zero, already existing target but missed in the detection
                     # Update bbox, keep id, increase misses counter
-                    if np.max(candidates)!=0:
+                    if np.max(candidates)>=iou_threshold:
                         best_match_index = np.argmax(candidates)
                         d = predicted_targets[best_match_index]
                         target.update_bbox(d)
                         target.increase_missed_bbox()
-                        new_targets.append(target)
+                        new_targets = add_new_target(target, new_targets)
             
             #Max overlap of detections and target over detections, if 0, new track
             for detection in frame_dets: 
                 candidates = []
                 for target in targets: 
                     candidates.append(iou_bbox(detection.bbox, target.bbox)) 
+                pred_candidates = []
+                for predicted in predicted_targets:
+                    pred_candidates.append(iou_bbox(detection.bbox,predicted.bbox))
 
-                if np.max(candidates)==0:
+                if np.max(candidates)<iou_threshold and np.max(pred_candidates)<iou_threshold:
                     # New detection
                     detection.id = track_id
-                    track_id += 1
-                    new_targets.append(detection)                
+                    track_id += 1  
+                    new_targets = add_new_target(detection, new_targets)             
 
         #Draw the image and also put the id
         for t in new_targets:
@@ -188,7 +210,7 @@ def track_max_overlap_of(bb_det, bb_gt, of):
             cv2.rectangle(im, (int(t.xtl), int(t.ytl)), (int(t.xbr), int(t.ybr)), color=color, thickness=3) 
             cv2.putText(im,str(t.id), (int(t.xtl), int(t.ytl)), 
                         cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2)
-        cv2.imwrite('figures/tracking/overlap/frame_' + format(i, '04d') + '.jpg', im) 
+        cv2.imwrite('figures/tracking/overlap_of/frame_' + format(i, '04d') + '.jpg', im) 
         
         #Update targets
         targets = new_targets
