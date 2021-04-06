@@ -4,8 +4,9 @@ from utils.bm import *
 from utils.flow import *
 from tqdm import tqdm
 import time
+import pickle as pkl
 
-f = open("output.txt", "a")
+f = open("results.txt", "a")
 
 def block_matching(img_past, img_future, estimation_dir, block_size, search_border, method):
     height, width = img_past.shape[:2]
@@ -105,6 +106,7 @@ def task1():
     search_border = [4, 8, 16, 32, 64, 128] # Up-down-right-left pixels to look away from block
     search_area = (2*search_border + block_size)
     method = ["SSD", "SAD", "MSE", "MAD", "template"]
+    results = []
 
     for direc in estimation_dir:
         for blk in block_size:
@@ -131,6 +133,13 @@ def task1():
                     print("MSEN: ", msen)
                     print("PEPN: ", pepn)
                     print("---------------------")
+
+                    results.append([direc, blk, bor, met, end_time - start_time, msen, pepn])
+                    print(results, file = f)
+                    print(results)
+
+                    with open('results.pkl', 'wb') as handle:
+                        pkl.dump(results, handle, protocol=pkl.HIGHEST_PROTOCOL)
 
 
 if __name__ == '__main__':
