@@ -134,10 +134,12 @@ def task1():
                     print("PEPN: ", pepn)
                     print("---------------------")
 
-                    results.append(direc, blk, bor, met, end_time - start_time, msen, pepn)
+                    results.append([direc, blk, bor, met, end_time - start_time, msen, pepn])
+                    print(results, file = f)
+                    print(results)
 
                     with open('results.pkl', 'wb') as handle:
-                        pkl.dump(result, handle, protocol=pickle.HIGHEST_PROTOCOL)
+                        pkl.dump(results, handle, protocol=pkl.HIGHEST_PROTOCOL)
 
 
 if __name__ == '__main__':
