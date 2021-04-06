@@ -13,20 +13,23 @@ from evaluation.iou import iou_bbox, compute_bb_distance
 import motmetrics as mm
 from tracking.sort import Sort
 from utils.non_maximum_supression import apply_non_max_supression
+from utils.plotting import plot_detections
 
 def remove_missed_targets(targets, max_misses=2):
     cleaned_targets = []
     for target in targets:
         if target.missed <= max_misses:
             cleaned_targets.append(target)
+        else:
+            print('Eliminating target!')
     return cleaned_targets
 
 def predict_targets(targets, flow):
     predicted_targets = [] 
     for t in targets:
         avg_flow = np.mean(flow[int(t.ytl):int(t.ybr), int(t.xtl):int(t.xbr)], axis=(0,1))
-        predicted = BB(t.frame, t.id, t.label, t.xtl + avg_flow[1], t.xbr + avg_flow[1],
-                       t.ytl + avg_flow[0], t.ybr + avg_flow[0], t.score)
+        predicted = BB(t.frame, t.id, t.label, t.xtl + avg_flow[1], t.ytl + avg_flow[0],
+                       t.xbr + avg_flow[1], t.ybr + avg_flow[0], t.score)
         predicted_targets.append(predicted)
     return predicted_targets
 
@@ -123,10 +126,11 @@ def track_max_overlap_of(bb_det, bb_gt):
     targets = []
     track_id = 0
     acc = mm.MOTAccumulator(auto_id=True)
-    for i, (frame_dets, gt_dets) in enumerate(tqdm(zip(bb_det, bb_gt))):
+    for i, (frame_dets, gt_dets) in enumerate(zip(bb_det, bb_gt)):
 
-        img_path = './datasets/aicity/AICity_data/train/S03/c010/frames/frame_' + str(gt_dets[0].frame).zfill(4) + '.png'
-        flow = flowpy.flow_read('./datasets/aicity/AICity_data/train/S03/c010/of/frame_'+ str(gt_dets[0].frame).zfill(4) +'.png')
+        print(str(gt_dets[0].frame+1).zfill(4))
+        img_path = './datasets/aicity/AICity_data/train/S03/c010/frames/frame_' + str(gt_dets[0].frame+1).zfill(4) + '.png'
+        flow = flowpy.flow_read('./datasets/aicity/AICity_data/train/S03/c010/of/frame_'+ str(gt_dets[0].frame+1).zfill(4) +'.png')
         im = cv2.imread(img_path, cv2.IMREAD_COLOR)
 
         new_targets = []
@@ -140,6 +144,7 @@ def track_max_overlap_of(bb_det, bb_gt):
         else:
             #Remove targets that gave been missed multiple times
             targets = remove_missed_targets(targets, max_misses=2) 
+
             #Predict new targets using OF (always assuming forward direction)
             predicted_targets = predict_targets(targets, flow)
             
