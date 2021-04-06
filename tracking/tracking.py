@@ -24,14 +24,24 @@ def remove_missed_targets(targets, max_misses=2):
             print('Eliminating target!')
     return cleaned_targets
 
-def predict_targets(targets, flow):
+def predict_targets(targets, flow, momentum=3):
     predicted_targets = [] 
     for t in targets:
-        avg_flow = np.mean(flow[int(t.ytl):int(t.ybr), int(t.xtl):int(t.xbr)], axis=(0,1))
-        predicted = BB(t.frame, t.id, t.label, t.xtl + avg_flow[1], t.ytl + avg_flow[0],
-                       t.xbr + avg_flow[1], t.ybr + avg_flow[0], t.score)
+        box_flow = flow[int(t.ytl):int(t.ybr), int(t.xtl):int(t.xbr)]
+        box_flow = momentum*box_flow
+        avg_flow = np.mean(box_flow, axis=(0,1))
+        predicted = BB(t.frame, t.id, t.label, t.xtl - avg_flow[1], t.ytl - avg_flow[0],
+                       t.xbr - avg_flow[1], t.ybr - avg_flow[0], t.score)
         predicted_targets.append(predicted)
     return predicted_targets
+
+def add_new_target(query, targets):
+    for target in targets:
+        if iou_bbox(query.bbox, target.bbox) > 0.95:
+            return targets
+    targets.append(query)
+    return targets
+
 
 def track_max_overlap(bb_det, bb_gt):
     targets = []
@@ -122,7 +132,7 @@ def track_max_overlap(bb_det, bb_gt):
     print(summary)
     return summary
 
-def track_max_overlap_of(bb_det, bb_gt):
+def track_max_overlap_of(bb_det, bb_gt, iou_threshold=0.2):
     targets = []
     track_id = 0
     acc = mm.MOTAccumulator(auto_id=True)
@@ -143,7 +153,7 @@ def track_max_overlap_of(bb_det, bb_gt):
 
         else:
             #Remove targets that gave been missed multiple times
-            targets = remove_missed_targets(targets, max_misses=2) 
+            targets = remove_missed_targets(targets, max_misses=4) 
 
             #Predict new targets using OF (always assuming forward direction)
             predicted_targets = predict_targets(targets, flow)
@@ -155,12 +165,12 @@ def track_max_overlap_of(bb_det, bb_gt):
                     candidates.append(iou_bbox(detection.bbox, target.bbox))
                 
                 # If the maximum overlap is not zero, already existing target, update box, keep id
-                if np.max(candidates)!=0:
+                if np.max(candidates)>=iou_threshold:
                     best_match_index = np.argmax(candidates)
                     d = frame_dets[best_match_index]
                     target.update_bbox(d)
                     target.missed = 0
-                    new_targets.append(target)
+                    new_targets = add_new_target(target, new_targets)
 
                 else:
                     #Max overlap of target and predictions
@@ -170,24 +180,27 @@ def track_max_overlap_of(bb_det, bb_gt):
                     
                     # If the maximum overlap is not zero, already existing target but missed in the detection
                     # Update bbox, keep id, increase misses counter
-                    if np.max(candidates)!=0:
+                    if np.max(candidates)>=iou_threshold:
                         best_match_index = np.argmax(candidates)
                         d = predicted_targets[best_match_index]
                         target.update_bbox(d)
                         target.increase_missed_bbox()
-                        new_targets.append(target)
+                        new_targets = add_new_target(target, new_targets)
             
             #Max overlap of detections and target over detections, if 0, new track
             for detection in frame_dets: 
                 candidates = []
                 for target in targets: 
                     candidates.append(iou_bbox(detection.bbox, target.bbox)) 
+                pred_candidates = []
+                for predicted in predicted_targets:
+                    pred_candidates.append(iou_bbox(detection.bbox,predicted.bbox))
 
-                if np.max(candidates)==0:
+                if np.max(candidates)<iou_threshold and np.max(pred_candidates)<iou_threshold:
                     # New detection
                     detection.id = track_id
-                    track_id += 1
-                    new_targets.append(detection)                
+                    track_id += 1  
+                    new_targets = add_new_target(detection, new_targets)             
 
         #Draw the image and also put the id
         for t in new_targets:
