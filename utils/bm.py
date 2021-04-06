@@ -59,6 +59,8 @@ def compute_dist(ref_b, target_b, method = "SSD"):
         distance = np.mean((target_b - ref_b) ** 2)
     if method == 'MAD':
         distance = np.mean(np.abs(target_b - ref_b))
+    if method == 'euclidean':
+        distance = np.sqrt(np.sum((target_b - ref_b) ** 2))
     return distance
 
 def block_matching_block_show(ref_block, target_area, i_start_area, j_start_area, im_ref_show):
@@ -95,7 +97,7 @@ def block_matching_block(ref_block, target_area, method):
     min_dist = np.zeros(shape=(target_area.shape[0] - height_ref, target_area.shape[1] - width_ref))
 
     # Exhaustive search
-    if method == "SSD" or method == "SAD" or method == "MSE" or method == "MAD":
+    if method == "SSD" or method == "SAD" or method == "MSE" or method == "MAD" or method == "euclidean":
         for i in range(0, target_area.shape[0] - height_ref):
             for j in range(0, target_area.shape[1] - width_ref):
                 target_block = target_area[i: i + height_ref, j: j + width_ref]
