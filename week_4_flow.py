@@ -151,7 +151,8 @@ def task_3_1():
 
     # Get GT for evaluation
     bb_gt = []
-    start, end = 1071, 2139
+    #start, end = 1071, 2139
+    start, end = 1071, 1371
     for frame in range(start, end):
         boxes = []
         for box in gt[frame]:
@@ -161,7 +162,8 @@ def task_3_1():
     # Fix detections
     bb_det_aux = []
     for i,frame in enumerate(bb_det):
-        if i < 536 or i > 1603:
+        #if i < 536 or i > 1603:
+        if i < 536 or i > 835:
             continue
         boxes = []
         for box in frame:
