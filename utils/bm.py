@@ -119,7 +119,8 @@ def block_matching_block(ref_block, target_area, method):
     if method == "template1": metric = cv2.TM_CCOEFF
     if method == "template2": metric = cv2.TM_CCOEFF_NORMED
     if method == "template3": metric = cv2.TM_CCORR
-    if method == "template4": metric = cv2.TM_SQDIFF
+    if method == "template4": metric = cv2.TM_CCORR_NORMED
+    if method == "template5": metric = cv2.TM_SQDIFF
     if method == "template5": metric = cv2.TM_SQDIFF_NORMED
 
     res = cv2.matchTemplate(target_area,ref_block,metric)
