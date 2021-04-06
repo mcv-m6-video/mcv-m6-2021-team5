@@ -13,6 +13,20 @@ import motmetrics as mm
 from tracking.sort import Sort
 from utils.non_maximum_supression import apply_non_max_supression
 
+def remove_missed_targets(targets, max_misses=2):
+    cleaned_targets = []
+    for target in targets:
+        if target.missed <= max_misses:
+            cleaned_targets.append(target)
+    return cleaned_targets
+
+def predict_targets(targets, frame_of):
+    predicted_targets = []
+    for target in targets:
+        #update bbox using frame_of
+        continue
+    return 
+
 def track_max_overlap(bb_det, bb_gt):
     targets = []
     track_id = 0
@@ -102,6 +116,97 @@ def track_max_overlap(bb_det, bb_gt):
     print(summary)
     return summary
 
+def track_max_overlap_of(bb_det, bb_gt, of):
+    targets = []
+    track_id = 0
+    acc = mm.MOTAccumulator(auto_id=True)
+
+    for i, (frame_dets, gt_dets, frame_of) in enumerate(tqdm(zip(bb_det, bb_gt, of))):
+
+        img_path = './datasets/aicity/AICity_data/train/S03/c010/frames/frame_' + str(frame_dets[0].frame+1).zfill(4) + '.png'
+        im = cv2.imread(img_path, cv2.IMREAD_COLOR)
+
+        new_targets = []
+        if targets == []:
+            # Store the targets of the first frame
+            for detection in frame_dets:
+                detection.id = track_id
+                track_id += 1
+            new_targets = frame_dets
+
+        else:
+            #Remove targets that gave been missed multiple times
+            targets = remove_missed_targets(targets, max_misses=2) 
+            #Predict new targets using OF (always assuming forward direction)
+            predicted_targets = predict_targets(targets, frame_of)
+            
+            for target in targets:  
+                #Max overlap of detections and target over targets, update bbox
+                candidates = []
+                for detection in frame_dets:
+                    candidates.append(iou_bbox(detection.bbox, target.bbox))
+                
+                # If the maximum overlap is not zero, already existing target, update box, keep id
+                if np.max(candidates)!=0:
+                    best_match_index = np.argmax(candidates)
+                    d = frame_dets[best_match_index]
+                    target.update_bbox(d)
+                    new_targets.append(target)
+
+                else:
+                    #Max overlap of target and predictions
+                    candidates = []
+                    for prediction in predicted_targets:
+                        candidates.append(iou_bbox(prediction.bbox, target.bbox))
+                    
+                    # If the maximum overlap is not zero, already existing target but missed in the detection
+                    # Update bbox, keep id, increase misses counter
+                    if np.max(candidates)!=0:
+                        best_match_index = np.argmax(candidates)
+                        d = predicted_targets[best_match_index]
+                        target.update_bbox(d)
+                        target.increase_missed_bbox()
+                        new_targets.append(target)
+            
+            #Max overlap of detections and target over detections, if 0, new track
+            for detection in frame_dets: 
+                candidates = []
+                for target in targets: 
+                    candidates.append(iou_bbox(detection.bbox, target.bbox)) 
+
+                if np.max(candidates)==0:
+                    # New detection
+                    detection.id = track_id
+                    track_id += 1
+                    new_targets.append(detection)                
+
+        #Draw the image and also put the id
+        for t in new_targets:
+            np.random.seed(t.id)
+            c = list(np.random.choice(range(int(256)), size=3)) 
+            color = (int(c[0]), int(c[1]), int(c[2]))
+            cv2.rectangle(im, (int(t.xtl), int(t.ytl)), (int(t.xbr), int(t.ybr)), color=color, thickness=3) 
+            cv2.putText(im,str(t.id), (int(t.xtl), int(t.ytl)), 
+                        cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2)
+        cv2.imwrite('figures/tracking/overlap/frame_' + format(i, '04d') + '.jpg', im) 
+        
+        #Update targets
+        targets = new_targets
+
+        #Compute distaces and create id arrays
+        gt_ids = [gt.id for gt in gt_dets]
+        det_ids = [detection.id for detection in new_targets]   
+
+        distances = np.zeros((len(gt_dets), len(new_targets)))
+        for i, gt in enumerate(gt_dets):
+            for j, detection in enumerate(new_targets):
+                distances[i,j] = compute_bb_distance(detection, gt)
+        acc.update(gt_ids, det_ids, distances)
+
+    mh = mm.metrics.create()
+    summary = mh.compute(acc, metrics=['num_frames', 'mota', 'motp', 'idf1'], name='acc')
+    print(summary)
+    return summary
 
 
 def track_kalman(bb_det, bb_gt):
@@ -150,5 +255,7 @@ def track_kalman(bb_det, bb_gt):
     summary = mh.compute(acc, metrics=['num_frames', 'mota', 'motp', 'idf1'], name='acc')
     print(summary)
     return summary
+
+
         
     

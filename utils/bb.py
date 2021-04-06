@@ -9,6 +9,7 @@ class BB:
         self.xbr = xbr
         self.ybr = ybr
         self.score = score
+        self.missed = 0
 
     @property
     def bbox(self):
@@ -42,3 +43,6 @@ class BB:
         self.ytl = new_bbox.ytl
         self.xbr = new_bbox.xbr
         self.ybr = new_bbox.ybr
+    
+    def increase_missed_bbox(self):
+        self.misses += 1
