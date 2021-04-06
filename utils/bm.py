@@ -121,7 +121,7 @@ def block_matching_block(ref_block, target_area, method):
     if method == "template3": metric = cv2.TM_CCORR
     if method == "template4": metric = cv2.TM_CCORR_NORMED
     if method == "template5": metric = cv2.TM_SQDIFF
-    if method == "template5": metric = cv2.TM_SQDIFF_NORMED
+    if method == "template6": metric = cv2.TM_SQDIFF_NORMED
 
     res = cv2.matchTemplate(target_area,ref_block,metric)
     min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
