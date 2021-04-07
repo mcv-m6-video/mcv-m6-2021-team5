@@ -59,6 +59,8 @@ def compute_dist(ref_b, target_b, method = "SSD"):
         distance = np.mean((target_b - ref_b) ** 2)
     if method == 'MAD':
         distance = np.mean(np.abs(target_b - ref_b))
+    if method == 'euclidean':
+        distance = np.sqrt(np.sum((target_b - ref_b) ** 2))
     return distance
 
 def block_matching_block_show(ref_block, target_area, i_start_area, j_start_area, im_ref_show):
@@ -95,7 +97,7 @@ def block_matching_block(ref_block, target_area, method):
     min_dist = np.zeros(shape=(target_area.shape[0] - height_ref, target_area.shape[1] - width_ref))
 
     # Exhaustive search
-    if method == "SSD" or method == "SAD" or method == "MSE" or method == "MAD":
+    if method == "SSD" or method == "SAD" or method == "MSE" or method == "MAD" or method == "euclidean":
         for i in range(0, target_area.shape[0] - height_ref):
             for j in range(0, target_area.shape[1] - width_ref):
                 target_block = target_area[i: i + height_ref, j: j + width_ref]
@@ -105,11 +107,31 @@ def block_matching_block(ref_block, target_area, method):
                 min_dist[i, j] = dist
         
         arg_min_dist = np.unravel_index(np.argmin(min_dist, axis=None), min_dist.shape)
+        return arg_min_dist
 
-    # Match template
+    # Match template (Sklearn)
     if method == "template":
         corr = match_template(target_area, ref_block)
         arg_min_dist = np.unravel_index(np.argmin(corr, axis=None), corr.shape)
+        return arg_min_dist
+
+    # Match template (OpenCV)
+    if method == "template1": metric = cv2.TM_CCOEFF
+    if method == "template2": metric = cv2.TM_CCOEFF_NORMED
+    if method == "template3": metric = cv2.TM_CCORR
+    if method == "template4": metric = cv2.TM_CCORR_NORMED
+    if method == "template5": metric = cv2.TM_SQDIFF
+    if method == "template6": metric = cv2.TM_SQDIFF_NORMED
+
+    res = cv2.matchTemplate(target_area,ref_block,metric)
+    min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
+
+    # If the metric is TM_SQDIFF or TM_SQDIFF_NORMED, take minimum
+    if metric in [cv2.TM_SQDIFF, cv2.TM_SQDIFF_NORMED]:
+        top_left = min_loc
+    else:
+        top_left = max_loc
+    arg_min_dist = (top_left[1], top_left[0])
 
     return arg_min_dist
 

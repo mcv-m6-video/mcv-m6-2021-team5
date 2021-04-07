@@ -9,7 +9,7 @@ def stabilize_frame(frame, estimated_of, w, h, acc_t, method='average'):
         # Average estimated optical flow
         print(np.shape(estimated_of))
         #print(estimated_of)
-        avg_estimated_of = -np.array(estimated_of.mean(axis=0).mean(axis=0), dtype=np.float32)
+        avg_estimated_of = np.array(-estimated_of.mean(axis=0).mean(axis=0), dtype=np.float32)
         print(avg_estimated_of)
 
         acc_t += avg_estimated_of
@@ -65,3 +65,27 @@ def stb_frame_of(frame, estimated_of, w, h):
     frame_stabilized = cv2.warpAffine(frame, affine_H, (w, h))
     
     return frame_stabilized
+
+def apply_camera_motion(frame, optical_flow, w, h, acc_t, method='average'):
+
+    if method == 'average':
+        print("AVERageeeeee")
+        # Average
+        average_optical_flow = - np.array(optical_flow.mean(axis=0).mean(axis=0), dtype=np.float32)
+        acc_t += average_optical_flow
+        H = np.float32([[1, 0, acc_t[0]], [0, 1, acc_t[1]]])
+        frame_stabilized = cv2.warpAffine(frame, H, (w, h))
+
+    if method == 'med_average':
+        # Median
+        optical_flow = optical_flow.flatten().reshape(h * w, 2)
+        np.random.shuffle(optical_flow)
+        optical_flow[:,0] = medfilt(optical_flow[:,0], 5)
+        optical_flow[:,1] = medfilt(optical_flow[:,1], 5)
+        # Average
+        average_optical_flow = np.array(-optical_flow.mean(axis=0), dtype=np.float32)
+        acc_t += average_optical_flow
+        H = np.float32([[1, 0, acc_t[0]], [0, 1, acc_t[1]]])
+        frame_stabilized = cv2.warpAffine(frame, H, (w, h))
+
+    return frame_stabilized, acc_t
