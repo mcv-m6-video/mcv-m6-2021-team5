@@ -19,6 +19,13 @@ import matplotlib
 matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 
+import cv2
+from utils.bm import block_matching
+from utils.flow import *
+import os
+from scipy.signal import medfilt
+from utils.stabilization import *
+
 xmlfile = "datasets/aicity/ai_challenge_s03_c010-full_annotation.xml" 
 
 def compute_pyflow_of(path):
@@ -64,6 +71,57 @@ def calculate_video_of(dir, start=535, end=2141, direc='forward', blk=32, bor=16
     if direc=='backward':
         video_of.append(None)
     return video_of
+
+def task1_1():
+    # Estimate optical flow with block matching
+
+     # Read GT optical flow
+    gt_of = read_of("datasets/flow/gt/flow_noc/000045_10.png")
+
+    # Read past and future images
+    img_past = cv2.imread("datasets/others/colored_0/000045_10.png", cv2.IMREAD_COLOR)
+    img_future = cv2.imread("datasets/others/colored_0/000045_11.png", cv2.IMREAD_COLOR)
+
+    # Compute optical flow
+    estimation_dir = ["backward", "forward"]
+    block_size = [4, 8, 16, 32, 64]
+    search_border = [4, 8, 16, 32, 64, 128] # Up-down-right-left pixels to look away from block
+    search_area = (2*search_border + block_size)
+    method = ["SSD", "SAD", "MSE", "MAD", "template"]
+    results = []
+
+    for direc in estimation_dir:
+        for blk in block_size:
+            for bor in search_border:
+                for met in method:
+                    print("NEW ITERATION: \n\tEstimation direction: ", direc, "\n\tBlock size: ", blk, "\n\tSearch border: ", bor, "\n\tMethod: ", met, file = f)
+                    print("NEW ITERATION: \n\tEstimation direction: ", direc, "\n\tBlock size: ", blk, "\n\tSearch border: ", bor, "\n\tMethod: ", met)
+                    start_time = time.time()
+                    estimated_of = block_matching(img_past, img_future, direc, blk, bor, met)
+                    end_time = time.time()
+                    print("Elapsed time: ", end_time - start_time, file = f)
+                    print("Elapsed time: ", end_time - start_time)
+
+                    # Compute metrics
+                    filename = "bm_" + str(direc) + "_" + str(blk) + "_" + str(bor) + "_" + str(met)
+                    dense_of_plot(estimated_of, img_past, filename)
+                    arrow_of_plot(estimated_of, img_past, filename, custom_scale=False)
+                    msen, pepn, of_error1 = compute_of_metrics(estimated_of, gt_of)
+                    plot_of_error(of_error1, filename=filename)
+
+                    print("MSEN: ", msen, file = f)
+                    print("PEPN: ", pepn, file = f)
+                    print("---------------------", file = f)
+                    print("MSEN: ", msen)
+                    print("PEPN: ", pepn)
+                    print("---------------------")
+
+                    results.append([direc, blk, bor, met, end_time - start_time, msen, pepn])
+                    print(results, file = f)
+                    print(results)
+
+                    with open('results.pkl', 'wb') as handle:
+                        pkl.dump(results, handle, protocol=pkl.HIGHEST_PROTOCOL)
 
 def task_1_2():
     for seq in ['000045']:
@@ -138,6 +196,59 @@ def task_1_2():
         plt.imshow(np.array(farneback_hsv))
         plt.show()
 
+def task_2_2():
+    start = 32
+    end = 236 # 188 # 142
+    prev_frame = None
+
+    # Resize frame for computational reasons
+    w = 600 # 480
+    h = 350 # 270
+
+    frame_dir = "stb_frames_" + str(start) + "_" + str(end) + "_" + str(w) + "_" + str(h) + "/"
+    if not os.path.exists(frame_dir):
+        os.makedirs(frame_dir)
+
+    frames_folder = "datasets/stabilization/seq1/"
+
+    direc = 'forward'
+    blk = 32
+    bor = 16
+    met = "SSD"
+
+    acc_t = np.zeros(2)
+    acc_total = []
+
+    for i in range(start, end):
+        # if i == 3 or i == 4:
+        # dir_frame = frames_folder + "frame_" + str(str(i).zfill(4)) + ".jpg"
+        dir_frame = frames_folder + str(str(i).zfill(4)) + ".jpg"
+        print(dir_frame)
+
+        frame_orig = cv2.imread(dir_frame, cv2.IMREAD_COLOR)
+        # cv2.imshow("current frame", frame_orig)
+        # cv2.waitKey(0)
+        # cv2.destroyAllWindows()
+
+        frame = cv2.resize(frame_orig, (w, h), interpolation=cv2.INTER_AREA)
+
+        # First frame case
+        if i == start:
+            frame_stb = frame
+        else:
+            # Estimate optical flow
+            # Img past: prev frame, img future: frame
+            estimated_of = block_matching_stb(prev_frame, frame, direc, blk, bor, met)
+            # dense_of_plot(estimated_of, prev_frame, "frame_" + str(i))
+            # arrow_of_plot(estimated_of, prev_frame, "frame_" + str(i), custom_scale=False)
+            stb_frame, acc_t = stabilize_frame(frame, estimated_of, w, h, acc_t, 'average')
+            #stb_frame = stb_frame_of(frame, estimated_of, w, h)
+            cv2.cvtColor(stb_frame, cv2.COLOR_BGR2RGB)
+            cv2.imwrite(frame_dir + "frame_stb_" + str(i) + ".jpg", stb_frame)
+        
+        # Update previous frame for the next iteration
+        prev_frame = frame
+        acc_total.append(acc_t)
 def task_3_1():
     #Load detections
     detections_filename = 'models/faster_rcnn_X_101_32x8d_FPN_3x_1_700_ours.pkl'
@@ -186,9 +297,12 @@ def task_3_1():
     track_max_overlap_of(bb_det, bb_gt)
 
 def main():
+    # print('Starting task 1.1: Optical Flow estimation with block matching...')
+    # task_1_1()
     # print('Starting task 1.2: SOTA Optical Flow...')
     # task_1_2()
-
+    # print('Starting task 2.2: Stabilization using our own Optical FLow estimation')
+    # task_2_2()
     print('Starting task 3.1: Tracking with OF...')
     task_3_1()
 main()
