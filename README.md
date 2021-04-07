@@ -70,6 +70,7 @@ In order to preview the different detections in the frames, vdo.avi should be do
 
 `cd datasets/aicity/AICity_data/train/S03/c010`
 `ffmpeg -i vdo.avi -f image2 frames/frame_%04d.png`
+``
 
 ### Dependencies
 `pip install xmltodict`
@@ -92,11 +93,23 @@ In order to preview the different detections in the frames, vdo.avi should be do
 
 `pip install scikit-image`
 
+#### PyFlow
+`python3 pyflow/setup.py build_ext -i`
+
   
 ## Execution  :gear:
 The program is executed as follows, for week X:
 
 `python week_X.py`
+
+### Week 4:
+For week 4, the tasks are divided in different scripts:
+#### Block matching:
+`python week_4_bm.py`
+#### Optical flow:
+`python week_4_flow.py`
+#### Stabilization:
+`python week_4_stb.py` 
 
 ## Results :clipboard:
 All the generated figures are shown or saved to the the directory `figures/`
