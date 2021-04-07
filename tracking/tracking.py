@@ -37,7 +37,7 @@ def predict_targets(targets, flow, momentum=3):
 
 def add_new_target(query, targets):
     for target in targets:
-        if iou_bbox(query.bbox, target.bbox) > 0.95:
+        if iou_bbox(query.bbox, target.bbox) > 0.98:
             return targets
     targets.append(query)
     return targets
@@ -53,13 +53,11 @@ def track_max_overlap(bb_det, bb_gt):
         img_path = './datasets/aicity/AICity_data/train/S03/c010/frames/frame_' + str(frame_dets[0].frame-1).zfill(4) + '.png'
         im = cv2.imread(img_path, cv2.IMREAD_COLOR)
 
-        # dets = []
-        # for det in frame_dets:
-        #     if det.score > 0.7:
-        #         dets.append(det)
-        # frame_dets = dets
-
-        # frame_dets = apply_non_max_supression(frame_dets, i, 0.9)
+        dets = []
+        for det in frame_dets:
+            if det.score > 0.7:
+                dets.append(det)
+        frame_dets = dets
 
         new_targets = []
         if targets == []:
@@ -132,7 +130,7 @@ def track_max_overlap(bb_det, bb_gt):
     print(summary)
     return summary
 
-def track_max_overlap_of(bb_det, bb_gt, iou_threshold=0.2):
+def track_max_overlap_of(bb_det, bb_gt, iou_threshold=0.05):
     targets = []
     track_id = 0
     acc = mm.MOTAccumulator(auto_id=True)
@@ -143,17 +141,23 @@ def track_max_overlap_of(bb_det, bb_gt, iou_threshold=0.2):
         flow = flowpy.flow_read('./datasets/aicity/AICity_data/train/S03/c010/of/frame_'+ str(gt_dets[0].frame+1).zfill(4) +'.png')
         im = cv2.imread(img_path, cv2.IMREAD_COLOR)
 
+        dets = []
+        for det in frame_dets:
+            if det.score > 0.6:
+                dets.append(det)
+        frame_dets = dets
+
         new_targets = []
         if targets == []:
             # Store the targets of the first frame
-            for detection in frame_dets:
+            for detection in frame_dets: 
                 detection.id = track_id
                 track_id += 1
             new_targets = frame_dets
 
         else:
             #Remove targets that gave been missed multiple times
-            targets = remove_missed_targets(targets, max_misses=4) 
+            targets = remove_missed_targets(targets, max_misses=5) 
 
             #Predict new targets using OF (always assuming forward direction)
             predicted_targets = predict_targets(targets, flow)
@@ -202,15 +206,15 @@ def track_max_overlap_of(bb_det, bb_gt, iou_threshold=0.2):
                     track_id += 1  
                     new_targets = add_new_target(detection, new_targets)             
 
-        #Draw the image and also put the id
-        for t in new_targets:
-            np.random.seed(t.id)
-            c = list(np.random.choice(range(int(256)), size=3)) 
-            color = (int(c[0]), int(c[1]), int(c[2]))
-            cv2.rectangle(im, (int(t.xtl), int(t.ytl)), (int(t.xbr), int(t.ybr)), color=color, thickness=3) 
-            cv2.putText(im,str(t.id), (int(t.xtl), int(t.ytl)), 
-                        cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2)
-        cv2.imwrite('figures/tracking/overlap_of/frame_' + format(i, '04d') + '.jpg', im) 
+        # #Draw the image and also put the id
+        # for t in new_targets:
+        #     np.random.seed(t.id)
+        #     c = list(np.random.choice(range(int(256)), size=3)) 
+        #     color = (int(c[0]), int(c[1]), int(c[2]))
+        #     cv2.rectangle(im, (int(t.xtl), int(t.ytl)), (int(t.xbr), int(t.ybr)), color=color, thickness=3) 
+        #     cv2.putText(im,str(t.id), (int(t.xtl), int(t.ytl)), 
+        #                 cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2)
+        # cv2.imwrite('figures/tracking/overlap_of/frame_' + format(i, '04d') + '.jpg', im) 
         
         #Update targets
         targets = new_targets

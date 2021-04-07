@@ -29,7 +29,7 @@ from utils.stabilization import *
 xmlfile = "datasets/aicity/ai_challenge_s03_c010-full_annotation.xml" 
 
 def compute_pyflow_of(path):
-    if os.path.isfile(path+'frame_2000.png'):
+    if os.path.isfile(path+'frame_1200.png'):
         print('Optical flow already computed!')
     else:
         alpha = 0.012
@@ -262,8 +262,8 @@ def task_3_1():
 
     # Get GT for evaluation
     bb_gt = []
-    #start, end = 1071, 2139
-    start, end = 1071, 1371
+    start, end = 1071, 2139
+    #start, end = 1071, 1371
     for frame in range(start, end):
         boxes = []
         for box in gt[frame]:
@@ -273,8 +273,8 @@ def task_3_1():
     # Fix detections
     bb_det_aux = []
     for i,frame in enumerate(bb_det):
-        #if i < 536 or i > 1603:
-        if i < 536 or i > 835:
+        if i < 536 or i > 1603:
+        #if i < 536 or i > 835:
             continue
         boxes = []
         for box in frame:
