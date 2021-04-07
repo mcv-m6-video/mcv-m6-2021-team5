@@ -196,7 +196,7 @@ def task_1_2():
         plt.imshow(np.array(farneback_hsv))
         plt.show()
 
-def task_2_2():
+def task_2_1():
     start = 32
     end = 236 # 188 # 142
     prev_frame = None
@@ -249,6 +249,10 @@ def task_2_2():
         # Update previous frame for the next iteration
         prev_frame = frame
         acc_total.append(acc_t)
+
+def task_2_2():
+    print('Download and follow the instructions in the following repository: https://github.com/Annbless/DUTCode')
+
 def task_3_1():
     #Load detections
     detections_filename = 'models/faster_rcnn_X_101_32x8d_FPN_3x_1_700_ours.pkl'
@@ -301,7 +305,9 @@ def main():
     # task_1_1()
     # print('Starting task 1.2: SOTA Optical Flow...')
     # task_1_2()
-    # print('Starting task 2.2: Stabilization using our own Optical FLow estimation')
+    # print('Starting task 2.1: Stabilization using our own Optical FLow estimation')
+    # task_2_1()
+    # print('Starting task 2.2: Stabilization using off-the-shelf methods')
     # task_2_2()
     print('Starting task 3.1: Tracking with OF...')
     task_3_1()
