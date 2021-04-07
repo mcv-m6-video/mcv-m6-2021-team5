@@ -19,7 +19,7 @@ from evaluation.ap import mean_average_precision
 from utils.reader import AnnotationReader
 from tracking.tracking import track_max_overlap, track_kalman
 from utils.non_maximum_supression import apply_non_max_supression
-
+from utils.bb import BB
 
 xmlfile = "datasets/aicity/ai_challenge_s03_c010-full_annotation.xml" 
 maps = []
@@ -175,12 +175,23 @@ def task_2(model='rcnn',method='overlap'):
 
     # Get GT for evaluation
     bb_gt = []
-    start, end = 535, 2141
+    start, end = 1071, 2139
     for frame in range(start, end):
         boxes = []
         for box in gt[frame]:
             boxes.append(box)
         bb_gt.append(boxes)
+    
+    # Fix detections
+    bb_det_aux = []
+    for i,frame in enumerate(bb_det):
+        if i < 536 or i > 1603:
+            continue
+        boxes = []
+        for box in frame:
+            boxes.append(BB(box.frame, box.id, box.label, box.xtl, box.ytl, box.xbr, box.ybr, box.score))
+        bb_det_aux.append(boxes)
+    bb_det = bb_det_aux
 
     #Track detected objects and compare to GT
     if method == 'overlap':
@@ -192,9 +203,9 @@ def task_2(model='rcnn',method='overlap'):
     
 
 def main():
-    task_1_1()
-    task_1_2()
+    #task_1_1()
+    #task_1_2()
     task_2(method='overlap')
-    task_2(method='kalman')
+    #task_2(method='kalman')
 
 main()
