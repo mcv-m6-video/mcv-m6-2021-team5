@@ -191,5 +191,6 @@ figures/*
 stb_frames/*
 seq2/*
 FLOW/*
+aic19-track1-mtmc-train/*
 
 # End of https://www.toptal.com/developers/gitignore/api/python,jupyternotebooks,vscode,opencv
