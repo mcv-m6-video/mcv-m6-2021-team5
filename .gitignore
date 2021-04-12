@@ -203,14 +203,4 @@ Thumbs.db #thumbnail cache on Windows
 !.vscode/extensions.json
 *.code-workspace
 
-<<<<<<< HEAD
-=======
-IMAGES/*
-figures/*
-stb_frames/*
-seq2/*
-FLOW/*
-aic19-track1-mtmc-train/*
-
->>>>>>> 241b6dfebad50bcf91f430a1e6a1f20536f062d4
 # End of https://www.toptal.com/developers/gitignore/api/python,jupyternotebooks,vscode,opencv
