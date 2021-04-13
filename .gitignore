@@ -9,6 +9,7 @@
 datasets/aicity/AICity_data/train/S03/c010/*
 datasets/aic19-track1-mtmc-train
 datasets/VeRi
+datasets/cars
 *.zip
 
 # # Include txt detections
