@@ -2,12 +2,15 @@ import os
 import numpy as np
 import cv2
 
-path_to_seqs = '../datasets/aic19-track1-mtmc-train/train/S01/'
+seq = ["S01", "S03", "S04"]
 
-# Loop over different views (cameras)
-for camera in os.listdir(path_to_seqs):
-    if str(camera) == 'c001':
+for s in seq:
+    path_to_seqs = '../datasets/aic19-track1-mtmc-train/train/' + s + '/'
+    path_to_crops = "../datasets/cars/" + s + "/"
+    os.makedirs(path_to_crops)
 
+    # Loop over different views (cameras)
+    for camera in os.listdir(path_to_seqs):
         frames = []
         dets_in_frame = []
         detections = []
@@ -20,6 +23,7 @@ for camera in os.listdir(path_to_seqs):
         print(path_to_gt)
         with open(path_to_gt) as f:
             lines = f.readlines()
+
         # Loop over detections
         for i, line in enumerate(lines):
             print(i)
@@ -41,25 +45,11 @@ for camera in os.listdir(path_to_seqs):
             width = float(data[4])
             height = float(data[5])
 
-            print(xtl)
-            print(ytl)
-            print(width)
-            print(height)
-            
-            # if (num_frame != prev_frame and i != 0) or i == len(lines) - 1:
-            #     frames.append(num_frame)
-            #     detections.append(dets_in_frame)
-            #     dets_in_frame = []
-
             if num_frame != prev_frame:
                 frames.append(prev_frame)
                 detections.append(dets_in_frame)
                 dets_in_frame = []
                 prev_frame = num_frame
-
-            # if i == len(lines) - 1:
-            #     print(line)
-
         
             dets_in_frame.append([num_frame, object_id, str(camera), xtl, ytl, width, height])
         
@@ -68,36 +58,23 @@ for camera in os.listdir(path_to_seqs):
         dets_in_frame = []
         prev_frame = num_frame
 
-        
-print(detections)
-print(np.shape(detections))
-print(np.shape(frames))
 
-print(frames)
-print(len(lines))
-
-video_cap = cv2.VideoCapture(path_to_vid)
-video_n_frames = video_cap.get(cv2.CAP_PROP_FRAME_COUNT)
-print(video_n_frames)
-success, input_frame = video_cap.read()
-i = 0
-for frame_vid in range(2, int(video_n_frames)):
-    # print(frame_vid)
-    success, read_frame = video_cap.read()
-    if not success:
-      break
-    if frame_vid in frames:
-        print("FRAME: ", frame_vid)
-        idx = frames.index(frame_vid)
-        for det in detections[idx]:
-            # Crop detection
-            cropped_det = read_frame[int(det[4]):int(det[4]+det[6]), int(det[3]):int(det[3]+det[5])]
-            print(i)
-            i = i+1
-            # cv2.imshow("hey", cropped_det)
-            # cv2.waitKey(0)
-            cv2.imwrite("../datasets/cars/" + "{:04}".format(int(det[1])) + "_" + str(frame_vid) + "_" + str(camera) + ".jpg", cropped_det)
-        
-# for i, frame in enumerate(frames):
-#     print("Detections for frame " + str(frame))
-#     print(detections[i])
+        video_cap = cv2.VideoCapture(path_to_vid)
+        video_n_frames = video_cap.get(cv2.CAP_PROP_FRAME_COUNT)
+        print(video_n_frames)
+        success, input_frame = video_cap.read()
+        for frame_vid in range(2, int(video_n_frames)):
+            # print(frame_vid)
+            success, read_frame = video_cap.read()
+            if not success:
+                break
+            if frame_vid in frames:
+                print("FRAME: ", frame_vid)
+                idx = frames.index(frame_vid)
+                for det in detections[idx]:
+                    # Crop detection
+                    cropped_det = read_frame[int(det[4]):int(det[4]+det[6]), int(det[3]):int(det[3]+det[5])]
+                    # cv2.imshow("hey", cropped_det)
+                    # cv2.waitKey(0)
+                    cv2.imwrite(path_to_crops + "{:04}".format(int(det[1])) + "_" + str(camera) + "_" + str(frame_vid) + ".jpg", cropped_det)
+            
