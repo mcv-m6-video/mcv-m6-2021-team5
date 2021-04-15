@@ -94,19 +94,19 @@ transform = transforms.Compose([
 					        0.229, 0.224, 0.225])
 					   ])
 
-checkpoint = torch.load('/Users/pranoyr/Desktop/weights/car_re_id_model.pth', map_location='cpu')
-model.load_state_dict(checkpoint['model_state_dict'])
+checkpoint = torch.load('../models/car_compare4.pth', map_location='cpu')
+model.load_state_dict(checkpoint['model_state_dict'], False)
 
 
-img1 = cv2.imread('/Users/pranoyr/Desktop/reid/6.png')
+img1 = cv2.imread('../datasets/cars/S03/0245_c010_732.jpg')
 img1 = cv2.cvtColor(img1,cv2.COLOR_BGR2RGB)
 img1 = Image.fromarray(img1)
 
-img2 = cv2.imread('/Users/pranoyr/Desktop/reid/7.png')
+img2 = cv2.imread('../datasets/cars/S03/0245_c011_765.jpg') 
 img2 = cv2.cvtColor(img2,cv2.COLOR_BGR2RGB)
 img2 = Image.fromarray(img2)
 
-img3 = cv2.imread('/Users/pranoyr/Desktop/reid/r2.png')
+img3 = cv2.imread('../datasets/cars/S03/0245_c014_449.jpg')
 img3 = cv2.cvtColor(img3,cv2.COLOR_BGR2RGB)
 img3 = Image.fromarray(img3)
 
