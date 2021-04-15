@@ -333,3 +333,50 @@ class IndianFaces(Dataset):
 
 	def __len__(self):
 		return len(self.mnist_dataset)
+
+class aicityTriplet(Dataset):
+    """
+    Train: For each sample (anchor) randomly chooses a positive and negative samples
+    Test: For each sample (anchor) randomly chooses a positive and negative samples
+    """
+
+	def __init__(self, filenames_txt, image_dir, transform=None):
+		self.transform = transform
+
+		with open(filenames_txt) as f:
+			self.filename_list = [line.rstrip() for line in f]
+
+		self.labels = []
+		for filename in self.filename_list:
+			self.labels.append(int(filename.split('_')[0]))
+
+		self.labels_set = set(self.labels.numpy())
+		self.label_to_indices = {label: np.where(self.labels.numpy() == label)[0]
+							for label in self.labels_set}
+
+	def __getitem__(self, index):
+
+		img1_path = os.path.join(image_dir,self.filename_list[index])
+		img1 = Image.open(img1_path)
+		label1 = self.labels[index]
+
+		positive_index = index
+		while positive_index == index:
+			positive_index = np.random.choice(self.label_to_indices[label1])
+
+		negative_label = np.random.choice(list(self.labels_set - set([label1])))
+		negative_index = np.random.choice(self.label_to_indices[negative_label])
+
+		img2_path = os.path.join(image_dir,self.train_data[positive_index])
+		img2 = Image.open(img2_path)
+		img3_path = os.path.join(image_dir,self.train_data[negative_index])
+		img3 = Image.open(img3_path)
+
+		if self.transform is not None:
+			img1 = self.transform(img1)
+			img2 = self.transform(img2)
+			img3 = self.transform(img3)
+		return (img1, img2, img3), []
+
+	def __len__(self):
+		return len(self.filename_list)
