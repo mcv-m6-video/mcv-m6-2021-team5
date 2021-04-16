@@ -340,43 +340,48 @@ class aicityTriplet(Dataset):
     Test: For each sample (anchor) randomly chooses a positive and negative samples
     """
 
-	def __init__(self, filenames_txt, image_dir, transform=None):
-		self.transform = transform
+    def __init__(self, filenames_txt, image_dir, transform=None):
+        self.image_dir = image_dir
+        self.transform = transform
 
-		with open(filenames_txt) as f:
-			self.filename_list = [line.rstrip() for line in f]
+        with open(filenames_txt) as f:
+        	self.filename_list = [line.rstrip() for line in f]
 
-		self.labels = []
-		for filename in self.filename_list:
-			self.labels.append(int(filename.split('_')[0]))
+        self.labels = []
+        for filename in self.filename_list:
+            self.labels.append(int(filename.split('_')[0]))
+        
+        self.labels_set = set(self.labels)
+        # print(self.labels_set)
+        self.label_to_indices = {label: np.where(np.array(self.labels) == label)[0]
+                            for label in self.labels_set}
+        # print(self.label_to_indices)
 
-		self.labels_set = set(self.labels.numpy())
-		self.label_to_indices = {label: np.where(self.labels.numpy() == label)[0]
-							for label in self.labels_set}
+    def __getitem__(self, index):
 
-	def __getitem__(self, index):
+        img1_path = os.path.join(self.image_dir, self.filename_list[index])
+        img1 = Image.open(img1_path)
+		# Anchor image label
+        label1 = self.labels[index]
 
-		img1_path = os.path.join(image_dir,self.filename_list[index])
-		img1 = Image.open(img1_path)
-		label1 = self.labels[index]
+        positive_index = index
+        while positive_index == index:
+            positive_index = np.random.choice(self.label_to_indices[label1])
 
-		positive_index = index
-		while positive_index == index:
-			positive_index = np.random.choice(self.label_to_indices[label1])
+        negative_label = np.random.choice(list(self.labels_set - set([label1])))
+        negative_index = np.random.choice(self.label_to_indices[negative_label])
 
-		negative_label = np.random.choice(list(self.labels_set - set([label1])))
-		negative_index = np.random.choice(self.label_to_indices[negative_label])
+        img2_path = os.path.join(self.image_dir,self.filename_list[positive_index])
+        img2 = Image.open(img2_path)
+        img3_path = os.path.join(self.image_dir,self.filename_list[negative_index])
+        img3 = Image.open(img3_path)
 
-		img2_path = os.path.join(image_dir,self.train_data[positive_index])
-		img2 = Image.open(img2_path)
-		img3_path = os.path.join(image_dir,self.train_data[negative_index])
-		img3 = Image.open(img3_path)
+        if self.transform is not None:
+            img1 = self.transform(img1)
+            img2 = self.transform(img2)
+            img3 = self.transform(img3)
+		# Return triplet of images and label of anchor image for the sake of plotting
+        return (np.array(img1), np.array(img2), np.array(img3)), label1
 
-		if self.transform is not None:
-			img1 = self.transform(img1)
-			img2 = self.transform(img2)
-			img3 = self.transform(img3)
-		return (img1, img2, img3), []
-
-	def __len__(self):
-		return len(self.filename_list)
+    def __len__(self):
+        return len(self.filename_list)
