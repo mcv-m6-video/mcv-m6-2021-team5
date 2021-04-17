@@ -14,6 +14,20 @@ import motmetrics as mm
 from tracking.sort import Sort
 from utils.non_maximum_supression import apply_non_max_supression
 from utils.plotting import plot_detections
+from multiview.opts import parse_opts
+import torch
+from multiview.networks import Net, EmbeddingNet, TripletNet
+from torchvision import transforms
+from PIL import Image
+
+# class TripletNet(nn.Module):
+#     def __init__(self, embedding_net):
+#         super(TripletNet, self).__init__()
+#         self.embedding_net = embedding_net
+
+#     def forward(self, x1):
+#         output1 = self.embedding_net(x1)
+#         return output1
 
 def remove_missed_targets(targets, max_misses=2):
     cleaned_targets = []
@@ -304,7 +318,17 @@ def track_kalman(bb_det, bb_gt, max_age=2500, min_hits=2, iou_threshold=0.5, sco
             im = cv2.imread(img_path, cv2.IMREAD_COLOR)
             for t in trackers:
                 box = BB(0,t[4],'', t[0], t[1], t[2], t[3], 0)
-                patch = im[box.bbox]
+                print(int(box.bbox[0]))
+                print(int(box.bbox[1]))
+                print(int(box.bbox[2]))
+                print(int(box.bbox[3]))
+                print(np.shape(im))
+                cv2.imshow("h",im)
+                cv2.waitKey(0)
+
+                patch = im[int(box.bbox[1]):int(box.bbox[3]), int(box.bbox[0]):int(box.bbox[2])]
+                cv2.imshow("hola", patch)
+                cv2.waitKey(0)
                 feat = triplet_inference(patch)
                 box.feature_vec = feat
                 track_bbs.append(box)
@@ -336,5 +360,33 @@ def track_kalman(bb_det, bb_gt, max_age=2500, min_hits=2, iou_threshold=0.5, sco
     return summary
 
 def triplet_inference(patch):
-    print('TODO')
-    return []
+    opt = parse_opts()
+    device = torch.device(f"cuda:{opt.gpu}" if opt.use_cuda else "cpu")
+
+    embedding_net=Net()
+    model=TripletNet(embedding_net)
+    model=model.to(device)
+    model.eval()
+
+    transform = transforms.Compose([
+                            transforms.Resize((96,96)),
+                            transforms.ToTensor(),
+                            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[
+                                0.229, 0.224, 0.225])
+                        ])
+
+    checkpoint = torch.load('models/car_compare4.pth', map_location='cpu')
+    model.load_state_dict(checkpoint['model_state_dict'], False)
+
+    patch = Image.fromarray(patch)
+    patch = transform(patch)
+
+    with torch.no_grad():
+        #descriptor = model(patch.unsqueeze(0))
+        descriptor = model.get_embedding(patch.unsqueeze(0))
+
+    print(np.shape(descriptor))
+    return descriptor
+
+def triplet_distance(BB1, BB2):
+    return torch.norm(BB1.feature_vec - BB2.feature_vec, 2, dim=1)
