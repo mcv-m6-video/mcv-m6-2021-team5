@@ -2,11 +2,8 @@
 # detectron2_models
 # detectron2_models_2
 
-
-
-
 # # Ignore video and frames dataset
-datasets/aicity/AICity_data/train/S03/c010/*
+datasets/aicity/AICity_data/train
 datasets/aic19-track1-mtmc-train
 datasets/VeRi
 datasets/cars

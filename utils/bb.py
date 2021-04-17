@@ -10,6 +10,7 @@ class BB:
         self.ybr = ybr
         self.score = score
         self.missed = 0
+        self.feature_vec = []
 
     @property
     def bbox(self):
