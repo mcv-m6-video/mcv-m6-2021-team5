@@ -1,6 +1,11 @@
 *json
 detectron2_models
 detectron2_models_2
+*.png
+outputs_first_iterations
+outputs_second_iterations
+outputs_third_iterations
+more_outputs
 
 # Ignore video and frames dataset
 datasets/aicity/AICity_data/train/S03/c010/*
