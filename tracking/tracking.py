@@ -43,20 +43,34 @@ def add_new_target(query, targets):
     return targets
 
 
-def track_max_overlap(bb_det, bb_gt):
+def track_max_overlap(bb_det, bb_gt, score_threshold=0.8):
     targets = []
     track_id = 0
     acc = mm.MOTAccumulator(auto_id=True)
 
     for i, (frame_dets, gt_dets) in enumerate(tqdm(zip(bb_det, bb_gt))):
 
-        img_path = './datasets/aicity/AICity_data/train/S03/c010/frames/frame_' + str(frame_dets[0].frame-1).zfill(4) + '.png'
-        im = cv2.imread(img_path, cv2.IMREAD_COLOR)
+        # img_path = './datasets/aicity/AICity_data/train/S03/c010/frames/frame_' + str(frame_dets[0].frame-1).zfill(4) + '.png'
+        # im = cv2.imread(img_path, cv2.IMREAD_COLOR)
 
-        dets = []
-        for det in frame_dets:
-            if det.score > 0.7:
-                dets.append(det)
+        if i == 0:
+            dets = []
+            for det in frame_dets:
+                if det.score > score_threshold and det.area > 3500: 
+                    dets.append(det)
+        else:
+            dets = []
+            for det in frame_dets:
+                if det.score > score_threshold and det.area > 3500: 
+                    parked = False
+                    for t in targets:
+                        iou = iou_bbox(det.bbox, t.bbox)
+                        if iou > 0.98:
+                            parked = True
+                            break
+                    if not parked:
+                        dets.append(det)
+
         frame_dets = dets
 
         new_targets = []
@@ -103,14 +117,14 @@ def track_max_overlap(bb_det, bb_gt):
                 #     new_targets.append(t)
 
         #Draw the image and also put the id
-        for t in new_targets:
-            np.random.seed(t.id)
-            c = list(np.random.choice(range(int(256)), size=3)) 
-            color = (int(c[0]), int(c[1]), int(c[2]))
-            cv2.rectangle(im, (int(t.xtl), int(t.ytl)), (int(t.xbr), int(t.ybr)), color=color, thickness=3) 
-            cv2.putText(im,str(t.id), (int(t.xtl), int(t.ytl)), 
-                        cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2)
-        cv2.imwrite('figures/tracking/overlap/frame_' + format(i, '04d') + '.jpg', im) 
+        # for t in new_targets:
+        #     np.random.seed(t.id)
+        #     c = list(np.random.choice(range(int(256)), size=3)) 
+        #     color = (int(c[0]), int(c[1]), int(c[2]))
+        #     cv2.rectangle(im, (int(t.xtl), int(t.ytl)), (int(t.xbr), int(t.ybr)), color=color, thickness=3) 
+        #     cv2.putText(im,str(t.id), (int(t.xtl), int(t.ytl)), 
+        #                 cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2)
+        # cv2.imwrite('figures/tracking/overlap/frame_' + format(i, '04d') + '.jpg', im) 
         
         #Update targets
         targets = new_targets
@@ -235,25 +249,48 @@ def track_max_overlap_of(bb_det, bb_gt, iou_threshold=0.05):
     return summary
 
 
-def track_kalman(bb_det, bb_gt):
-    mot_tracker = Sort(max_age=2300, min_hits=2, iou_threshold=0.35) #create instance of the SORT tracker
+def track_kalman(bb_det, bb_gt, max_age=2500, min_hits=2, iou_threshold=0.5, score_threshold=0.95, seq='c010', vis=False):
+    print(max_age, min_hits, iou_threshold, score_threshold)
+    mot_tracker = Sort(max_age=max_age, min_hits=min_hits, iou_threshold=iou_threshold) #create instance of the SORT tracker
     acc = mm.MOTAccumulator(auto_id=True)
 
-    for i, (frame_dets, gt_dets) in enumerate(tqdm(zip(bb_det, bb_gt))):
+    for i, (frame_dets, gt_dets) in enumerate(zip(bb_det, bb_gt)):
 
-        img_path = './datasets/aicity/AICity_data/train/S03/c010/frames/frame_' + str(frame_dets[0].frame+1).zfill(4) + '.png'
-        im = cv2.imread(img_path, cv2.IMREAD_COLOR)
+        # img_path = './datasets/aicity2/train/S03/'+seq+'/frames/frame_' + str(frame_dets[0].frame+1).zfill(4) + '.png'
+        # im = cv2.imread(img_path, cv2.IMREAD_COLOR)
 
         # Update Kalman tracker and obtain new prediction
         # Dets should be an array of bboxes (x1,y1,x2,y2,score)
-        #dets = np.array([det.bbox_score for det in frame_dets])
-        dets = []
-        for det in frame_dets:
-            if det.score > 0.8:
-                dets.append(det)
+        # dets = np.array([det.bbox_score for det in frame_dets])
+
+        if i == 0:
+            dets = []
+            for det in frame_dets:
+                if det.score > score_threshold and det.area > 3500: 
+                    dets.append(det)
+        else: 
+            # dets = []
+            # for det in frame_dets:
+            #     if det.score > score_threshold: 
+            #         dets.append(det)
+            dets = []
+            for det in frame_dets:
+                if det.score > score_threshold and det.area > 3500: 
+                    parked = False
+                    for t in trackers:
+                        iou = iou_bbox(det.bbox, [t[0], t[1], t[2], t[3]])
+                        if iou > 0.95:
+                            parked = True
+                            break
+                    if not parked:
+                        dets.append(det)
+
         dets = np.array([det.bbox_score for det in dets])
 
-        trackers = mot_tracker.update(dets)
+        if dets != []:
+            trackers = mot_tracker.update(dets)
+        else:
+            trackers = mot_tracker.update(np.empty((0, 5)))
 
         # Draw the image and also put the id
         # for t in trackers:
@@ -264,9 +301,21 @@ def track_kalman(bb_det, bb_gt):
         #     cv2.putText(im,str(int(t[4])), (int(t[0]),int(t[1])), 
         #                 cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2)
         
-        # cv2.imwrite('figures/tracking/kalman/frame_' + format(i, '04d') + '.jpg', im) 
+        # cv2.imwrite('figures/tracking/kalman/'+seq+'/frame_' + format(i, '04d') + '.jpg', im) 
 
-        #Compute distaces and create id arrays
+        ## Remove untracked cars
+        # trackers_filtered = []
+        # for t in trackers:
+        #     detection = BB(0,t[4],'', t[0], t[1], t[2], t[3], 0)
+        #     tracked = False
+        #     for gt in gt_dets:
+        #         if compute_bb_distance(detection, gt) < 25:
+        #             tracked = True
+        #     if tracked:
+        #         trackers_filtered.append(t)
+        # trackers = trackers_filtered
+
+        # Compute distaces and create id arrays
         gt_ids = [gt.id for gt in gt_dets]
         det_ids = [ t[4] for t in trackers]   
 
@@ -277,11 +326,15 @@ def track_kalman(bb_det, bb_gt):
                 distances[i,j] = compute_bb_distance(detection, gt)
         acc.update(gt_ids, det_ids, distances)
 
+        if vis and i % 10 == 0:
+            d = []
+            for t in trackers:
+                box = BB(0,t[4],'', t[0], t[1], t[2], t[3], 0)
+                d.append(box)
+            plot_detections(d,gt_dets,seq=seq)
+
     mh = mm.metrics.create()
     summary = mh.compute(acc, metrics=['num_frames', 'mota', 'motp', 'idf1'], name='acc')
+    
     print(summary)
     return summary
-
-
-        
-    
