@@ -22,8 +22,24 @@ from utils.bb import BB
 import random
 import time
 
+# Parameters
+distance_thresh = 100
 
 # Read the detections of all the sequences
 with open('tracks_dict.pkl', 'rb') as f:
     tracks_dict = pkl.load(f)
 
+seqs=['c010','c011','c012','c013','c014','c015']
+
+for seq in seqs:
+    # Compare each track descriptor to its match candidates
+    for t in tracks_dict[seq]:
+        candidates = get_match_candidates(t, tracks_dict)
+        dists = []
+        for c in candidates:
+            dists.append(compute_dist(c.feature_vec, t.feature_vec))
+        if np.min(dists) <= distance_thresh :
+            match_id = candidates[int(np.argmin(dists))].id
+            t.id = match_id
+        
+        

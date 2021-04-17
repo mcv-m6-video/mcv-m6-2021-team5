@@ -61,9 +61,11 @@ for seq in seqs:
 
     #Track detected objects and compare to GT
     tic = time.time()
-    tracks_dict[seq] = track_kalman(bb_det, bb_gt, max_age=2000, min_hits=4, iou_threshold=0.1, score_threshold=0.95, seq=seq, extract_descriptors=True)
+    tracks_dict[seq] = track_kalman(bb_det, bb_gt, max_age=2000, min_hits=4, iou_threshold=0.1, score_threshold=0.8, seq=seq, extract_descriptors=True)
     toc = time.time()
     print('Seq: '+seq+'| Tracking took: ' + str(toc-tic))
+    with open('tracks_seq_'+seq+'.pkl','wb') as f:
+        pkl.dump(tracks_dict[seq], f)
 
 with open('tracks_dict.pkl','wb') as f:
     pkl.dump(tracks_dict, f)
