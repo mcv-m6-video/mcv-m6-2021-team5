@@ -314,7 +314,10 @@ def track_kalman(bb_det, bb_gt, max_age=2500, min_hits=2, iou_threshold=0.5, sco
         # Extract box descriptors
         if extract_descriptors:
             track_bbs = []
-            img_path = './datasets/aicity/AICity_data/train/S03/'+seq+'/frames/frame_' + str(frame_dets[0].frame+1).zfill(4) + '.png'
+            # CAREFUL! Current directory only works for c010
+            # Either frames from other cameras are decompressed or vid cap on the fly
+            img_path = './datasets/aicity/AICity_data/train/S03/' + seq + '/frames/frame_' + str(frame_dets[0].frame+1).zfill(4) + '.png'
+            print(img_path)
             im = cv2.imread(img_path, cv2.IMREAD_COLOR)
             for t in trackers:
                 box = BB(0,t[4],'', t[0], t[1], t[2], t[3], 0)
@@ -323,12 +326,12 @@ def track_kalman(bb_det, bb_gt, max_age=2500, min_hits=2, iou_threshold=0.5, sco
                 print(int(box.bbox[2]))
                 print(int(box.bbox[3]))
                 print(np.shape(im))
-                cv2.imshow("h",im)
-                cv2.waitKey(0)
+                # cv2.imshow("h",im)
+                # cv2.waitKey(0)
 
                 patch = im[int(box.bbox[1]):int(box.bbox[3]), int(box.bbox[0]):int(box.bbox[2])]
-                cv2.imshow("hola", patch)
-                cv2.waitKey(0)
+                # cv2.imshow("hola", patch)
+                # cv2.waitKey(0)
                 feat = triplet_inference(patch)
                 box.feature_vec = feat
                 track_bbs.append(box)
@@ -385,7 +388,8 @@ def triplet_inference(patch):
         #descriptor = model(patch.unsqueeze(0))
         descriptor = model.get_embedding(patch.unsqueeze(0))
 
-    print(np.shape(descriptor))
+    # Must be 512 (Resnet Adaptation)
+    print("Check embedding size: " + str(np.shape(descriptor)))
     return descriptor
 
 def triplet_distance(BB1, BB2):
