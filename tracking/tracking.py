@@ -274,7 +274,10 @@ def triplet_inference(patch, model, transform):
 
     return np.array(descriptor.to("cpu"))
 
-def track_kalman(bb_det, bb_gt, max_age=2500, min_hits=2, iou_threshold=0.5, score_threshold=0.95, seq='c010', vis=False, extract_descriptors=False, write=False):
+def track_kalman(bb_det, bb_gt, max_age=2500, min_hits=2, 
+                 iou_threshold=0.5, score_threshold=0.95, 
+                 seq='c010', vis=False, extract_descriptors=False, 
+                 write=False, start_frame=0):
 
     mot_tracker = Sort(max_age=max_age, min_hits=min_hits, iou_threshold=iou_threshold) #create instance of the SORT tracker
     acc = mm.MOTAccumulator(auto_id=True)
@@ -354,7 +357,7 @@ def track_kalman(bb_det, bb_gt, max_age=2500, min_hits=2, iou_threshold=0.5, sco
             im = cv2.imread(img_path, cv2.IMREAD_COLOR)
 
             for t in trackers:
-                box = BB(0,t[4],'', t[0], t[1], t[2], t[3], 0)
+                box = BB(start_frame+i,t[4],'', t[0], t[1], t[2], t[3], 0)
                 patch = im[int(box.bbox[1]):int(box.bbox[3]), int(box.bbox[0]):int(box.bbox[2])]
                 cv2.imshow("win", patch)
                 feat = triplet_inference(patch, model, transform)
