@@ -358,6 +358,7 @@ def track_kalman(bb_det, bb_gt, max_age=2500, min_hits=2,
 
             for t in trackers:
                 box = BB(start_frame+i,t[4],'', t[0], t[1], t[2], t[3], 0)
+                box.set_camera(int(seq[1:]))
                 patch = im[int(box.bbox[1]):int(box.bbox[3]), int(box.bbox[0]):int(box.bbox[2])]
                 cv2.imshow("win", patch)
                 feat = triplet_inference(patch, model, transform)

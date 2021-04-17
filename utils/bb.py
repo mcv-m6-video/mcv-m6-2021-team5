@@ -11,6 +11,7 @@ class BB:
         self.score = score
         self.missed = 0
         self.feature_vec = []
+        self.camera = 0
 
     @property
     def bbox(self):
@@ -47,3 +48,6 @@ class BB:
     
     def increase_missed_bbox(self):
         self.missed += 1
+
+    def set_camera(self, cam):
+        self.camera = cam
