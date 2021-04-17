@@ -14,6 +14,7 @@ import motmetrics as mm
 from tracking.sort import Sort
 from utils.non_maximum_supression import apply_non_max_supression
 from utils.plotting import plot_detections
+
 from multiview.opts import parse_opts
 import torch
 from multiview.networks import Net, EmbeddingNet, TripletNet
@@ -263,11 +264,42 @@ def track_max_overlap_of(bb_det, bb_gt, iou_threshold=0.05):
     return summary
 
 
+
+def triplet_inference(patch, model, transform):
+    patch = Image.fromarray(patch)
+    patch = transform(patch)
+
+    with torch.no_grad():
+        descriptor = model.get_embedding(patch.unsqueeze(0))
+
+    return np.array(descriptor.to("cpu"))
+
 def track_kalman(bb_det, bb_gt, max_age=2500, min_hits=2, iou_threshold=0.5, score_threshold=0.95, seq='c010', vis=False, extract_descriptors=False, write=False):
-    print(max_age, min_hits, iou_threshold, score_threshold)
+
     mot_tracker = Sort(max_age=max_age, min_hits=min_hits, iou_threshold=iou_threshold) #create instance of the SORT tracker
     acc = mm.MOTAccumulator(auto_id=True)
     frame_tracks = []
+
+    if extract_descriptors:
+        opt = parse_opts()
+        device = torch.device(f"cuda:{opt.gpu}" if opt.use_cuda else "cpu")
+
+        embedding_net=Net()
+        model=TripletNet(embedding_net)
+        model=model.to(device)
+        model.eval()
+
+        transform = transforms.Compose([
+                                transforms.Resize((96,96)),
+                                transforms.ToTensor(),
+                                transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[
+                                    0.229, 0.224, 0.225])
+                            ])
+
+        checkpoint = torch.load('models/car_compare4.pth', map_location='cpu')
+        model.load_state_dict(checkpoint['model_state_dict'], False)
+
+
     for i, (frame_dets, gt_dets) in enumerate(zip(bb_det, bb_gt)):
 
         # Update Kalman tracker and obtain new prediction
@@ -319,23 +351,14 @@ def track_kalman(bb_det, bb_gt, max_age=2500, min_hits=2, iou_threshold=0.5, sco
             # Path is now hardcoded to folder with just one camera!
             # Change path to datasets/aic19-track1-mtmc-train +"train/S03" + seq ... when having extracted all frames per all cameras!
             img_path = './datasets/aicity/AICity_data/train/S03/' + seq + '/frames/frame_' + str(frame_dets[0].frame+1).zfill(4) + '.png'
-            # print(img_path)
             im = cv2.imread(img_path, cv2.IMREAD_COLOR)
-            # print(len(trackers))
+
             for t in trackers:
                 box = BB(0,t[4],'', t[0], t[1], t[2], t[3], 0)
-                # print(int(box.bbox[0]))
-                # print(int(box.bbox[1]))
-                # print(int(box.bbox[2]))
-                # print(int(box.bbox[3]))
-                # print(np.shape(im))
-                # cv2.imshow("h",im)
-                # cv2.waitKey(0)
-
                 patch = im[int(box.bbox[1]):int(box.bbox[3]), int(box.bbox[0]):int(box.bbox[2])]
-                # cv2.imshow("hola", patch)
-                # cv2.waitKey(0)
-                feat = triplet_inference(patch)
+                cv2.imshow("win", patch)
+                feat = triplet_inference(patch, model, transform)
+                print(feat)
                 box.feature_vec = feat
                 track_bbs.append(box)
             frame_tracks.append(track_bbs)
@@ -356,49 +379,14 @@ def track_kalman(bb_det, bb_gt, max_age=2500, min_hits=2, iou_threshold=0.5, sco
         for i, gt in enumerate(gt_dets):
             for j, t in enumerate(trackers):
                 detection = BB(0,t[4],'', t[0], t[1], t[2], t[3], 0)
-                # Old method
-                # distances[i,j] = compute_bb_distance(detection, gt)
-                # New method
-                distances[i,j] = feat_vec_distance(detection, gt)
+                distances[i,j] = compute_bb_distance(detection, gt)
         acc.update(gt_ids, det_ids, distances)
 
     mh = mm.metrics.create()
     summary = mh.compute(acc, metrics=['num_frames', 'mota', 'motp', 'idf1'], name='acc')
-    
     print(summary)
-    return summary
 
-def triplet_inference(patch):
-    opt = parse_opts()
-    device = torch.device(f"cuda:{opt.gpu}" if opt.use_cuda else "cpu")
-
-    embedding_net=Net()
-    model=TripletNet(embedding_net)
-    model=model.to(device)
-    model.eval()
-
-    transform = transforms.Compose([
-                            transforms.Resize((96,96)),
-                            transforms.ToTensor(),
-                            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[
-                                0.229, 0.224, 0.225])
-                        ])
-
-    checkpoint = torch.load('models/car_compare4.pth', map_location='cpu')
-    model.load_state_dict(checkpoint['model_state_dict'], False)
-
-    patch = Image.fromarray(patch)
-    patch = transform(patch)
-
-    with torch.no_grad():
-        #descriptor = model(patch.unsqueeze(0))
-        descriptor = model.get_embedding(patch.unsqueeze(0))
-
-    # Must be 512 (Resnet Adaptation)
-    print("Check embedding size: " + str(np.shape(descriptor)))
-    return descriptor
-
-def feat_vec_distance(BB1, BB2):
-    print(type(BB2))
-
-    return torch.norm(np.array(BB1.feature_vec) - np.array(BB2.feature_vec), 2, dim=1)
+    if extract_descriptors:
+        return frame_tracks
+    else:
+        return summary

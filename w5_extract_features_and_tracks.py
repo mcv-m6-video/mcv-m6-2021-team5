@@ -16,7 +16,8 @@ import time
 seqs=['c010','c011','c012','c013','c014','c015']
 detector='mask_rcnn' 
 method='kalman'
-dataset = "datasets/aic19-track1-mtmc-train"
+#dataset = "datasets/aic19-track1-mtmc-train"
+dataset = "datasets/aicity/AICity_data"
 tracks_dict = {}
 
 for seq in seqs: 
