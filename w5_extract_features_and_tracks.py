@@ -1,19 +1,10 @@
 import torch, torchvision
-import detectron2
 import numpy as np
 import os, cv2, random
 from matplotlib import pyplot as plt
 from tqdm import tqdm
 import pickle as pkl
 
-from detectron2.utils.visualizer import Visualizer
-from detectron2.data import MetadataCatalog, DatasetCatalog
-from detectron2.evaluation import COCOEvaluator
-from detectron2.engine import DefaultTrainer, DefaultPredictor
-from detectron2.config import get_cfg
-from detectron2 import model_zoo
-
-from detectron2_tools.io import detectronReader
 from utils.plotting import plot_detections
 from evaluation.ap import mean_average_precision
 from utils.reader import AnnotationReader
@@ -23,17 +14,18 @@ import random
 import time
 
 seqs=['c010','c011','c012','c013','c014','c015']
-detector=['mask_rcnn'] 
+detector='mask_rcnn' 
 method='kalman'
+dataset = "datasets/aic19-track1-mtmc-train"
 tracks_dict = {}
 
 for seq in seqs: 
     #Load detections
-    reader = AnnotationReader('datasets/aicity/AICity_data/train/S03/'+seq+'/det/det_'+detector+'.txt')
+    reader = AnnotationReader(dataset + '/train/S03/'+seq+'/det/det_'+detector+'.txt')
     det_rcnn = reader.get_bboxes_per_frame(classes=['car'])
 
     # Load GT
-    gt_reader = AnnotationReader('datasets/aicity/AICity_data/train/S03/'+seq+'/gt/gt.txt')
+    gt_reader = AnnotationReader(dataset + '/train/S03/'+seq+'/gt/gt.txt')
     gt = gt_reader.get_bboxes_per_frame(classes=['car'])
 
     # Get GT for evaluation
