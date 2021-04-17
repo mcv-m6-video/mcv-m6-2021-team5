@@ -401,4 +401,4 @@ def triplet_inference(patch):
 def feat_vec_distance(BB1, BB2):
     print(type(BB2))
 
-    return torch.norm(BB1.feature_vec - BB2.feature_vec, 2, dim=1)
+    return torch.norm(np.array(BB1.feature_vec) - np.array(BB2.feature_vec), 2, dim=1)
