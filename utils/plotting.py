@@ -13,7 +13,7 @@ def plot_detections(detection_list, gt_list=None, show=True, seq='c010'):
     if len(detection_list) == 0:
         return np.zeros((10,10,3))
 
-    img_path = './datasets/aicity2/train/S03/'+seq+'/frames/frame_' + str(detection_list[0].frame+1).zfill(4) + '.png'
+    img_path = './datasets/aicity/AICity_data/train/S03/'+seq+'/frames/frame_' + str(detection_list[0].frame+1).zfill(4) + '.png'
     img = cv2.imread(img_path, cv2.IMREAD_COLOR)
 
     for det in detection_list:

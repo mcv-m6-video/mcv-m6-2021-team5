@@ -22,21 +22,18 @@ from utils.bb import BB
 import random
 import time
 
-
-#seqs=['c010','c011','c012','c013','c014','c015']
 seqs=['c010','c011','c012','c013','c014','c015']
 detector=['mask_rcnn'] 
 method='kalman'
 tracks_dict = {}
 
-
 for seq in seqs: 
     #Load detections
-    reader = AnnotationReader('datasets/aicity2/train/S03/'+seq+'/det/det_'+detector+'.txt')
+    reader = AnnotationReader('datasets/aicity/AICity_data/train/S03/'+seq+'/det/det_'+detector+'.txt')
     det_rcnn = reader.get_bboxes_per_frame(classes=['car'])
 
     # Load GT
-    gt_reader = AnnotationReader('datasets/aicity2/train/S03/'+seq+'/gt/gt.txt')
+    gt_reader = AnnotationReader('datasets/aicity/AICity_data/train/S03/'+seq+'/gt/gt.txt')
     gt = gt_reader.get_bboxes_per_frame(classes=['car'])
 
     # Get GT for evaluation
@@ -62,16 +59,11 @@ for seq in seqs:
             boxes.append(box)
         bb_det.append(boxes)
 
-
     #Track detected objects and compare to GT
     tic = time.time()
-    if method == 'overlap':
-        track_max_overlap(bb_det, bb_gt)
-    elif method == 'kalman':
-        #track_kalman(bb_det, bb_gt, max_age=random.randint(100, 2000), min_hits=random.randint(0, 10), iou_threshold=random.uniform(0,1), score_threshold=random.uniform(0.8,1))
-        #1272 8 0.10943858413660335 0.9669930279617084
-        tracks_dict[seq] = track_kalman(bb_det, bb_gt, max_age=2000, min_hits=4, iou_threshold=0.1, score_threshold=0.95, seq=seq)
-    else:
-        print('Invalid tracking method: overlap or kalman')
+    tracks_dict[seq] = track_kalman(bb_det, bb_gt, max_age=2000, min_hits=4, iou_threshold=0.1, score_threshold=0.95, seq=seq, extract_descriptors=True)
     toc = time.time()
     print('Seq: '+seq+'| Tracking took: ' + str(toc-tic))
+
+with open('tracks_dict.pkl','wb') as f:
+    pkl.dump(tracks_dict, f)
