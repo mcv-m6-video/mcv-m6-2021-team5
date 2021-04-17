@@ -15,6 +15,21 @@ from tracking.sort import Sort
 from utils.non_maximum_supression import apply_non_max_supression
 from utils.plotting import plot_detections
 
+from multiview.opts import parse_opts
+import torch
+from multiview.networks import Net, EmbeddingNet, TripletNet
+from torchvision import transforms
+from PIL import Image
+
+# class TripletNet(nn.Module):
+#     def __init__(self, embedding_net):
+#         super(TripletNet, self).__init__()
+#         self.embedding_net = embedding_net
+
+#     def forward(self, x1):
+#         output1 = self.embedding_net(x1)
+#         return output1
+
 def remove_missed_targets(targets, max_misses=2):
     cleaned_targets = []
     for target in targets:
@@ -37,29 +52,41 @@ def predict_targets(targets, flow, momentum=3):
 
 def add_new_target(query, targets):
     for target in targets:
-        if iou_bbox(query.bbox, target.bbox) > 0.95:
+        if iou_bbox(query.bbox, target.bbox) > 0.98:
             return targets
     targets.append(query)
     return targets
 
 
-def track_max_overlap(bb_det, bb_gt):
+def track_max_overlap(bb_det, bb_gt, score_threshold=0.8):
     targets = []
     track_id = 0
     acc = mm.MOTAccumulator(auto_id=True)
 
     for i, (frame_dets, gt_dets) in enumerate(tqdm(zip(bb_det, bb_gt))):
 
-        img_path = './datasets/aicity/AICity_data/train/S03/c010/frames/frame_' + str(frame_dets[0].frame-1).zfill(4) + '.png'
-        im = cv2.imread(img_path, cv2.IMREAD_COLOR)
+        # img_path = './datasets/aicity/AICity_data/train/S03/c010/frames/frame_' + str(frame_dets[0].frame-1).zfill(4) + '.png'
+        # im = cv2.imread(img_path, cv2.IMREAD_COLOR)
 
-        # dets = []
-        # for det in frame_dets:
-        #     if det.score > 0.7:
-        #         dets.append(det)
-        # frame_dets = dets
+        if i == 0:
+            dets = []
+            for det in frame_dets:
+                if det.score > score_threshold and det.area > 3500: 
+                    dets.append(det)
+        else:
+            dets = []
+            for det in frame_dets:
+                if det.score > score_threshold and det.area > 3500: 
+                    parked = False
+                    for t in targets:
+                        iou = iou_bbox(det.bbox, t.bbox)
+                        if iou > 0.98:
+                            parked = True
+                            break
+                    if not parked:
+                        dets.append(det)
 
-        # frame_dets = apply_non_max_supression(frame_dets, i, 0.9)
+        frame_dets = dets
 
         new_targets = []
         if targets == []:
@@ -105,14 +132,14 @@ def track_max_overlap(bb_det, bb_gt):
                 #     new_targets.append(t)
 
         #Draw the image and also put the id
-        for t in new_targets:
-            np.random.seed(t.id)
-            c = list(np.random.choice(range(int(256)), size=3)) 
-            color = (int(c[0]), int(c[1]), int(c[2]))
-            cv2.rectangle(im, (int(t.xtl), int(t.ytl)), (int(t.xbr), int(t.ybr)), color=color, thickness=3) 
-            cv2.putText(im,str(t.id), (int(t.xtl), int(t.ytl)), 
-                        cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2)
-        cv2.imwrite('figures/tracking/overlap/frame_' + format(i, '04d') + '.jpg', im) 
+        # for t in new_targets:
+        #     np.random.seed(t.id)
+        #     c = list(np.random.choice(range(int(256)), size=3)) 
+        #     color = (int(c[0]), int(c[1]), int(c[2]))
+        #     cv2.rectangle(im, (int(t.xtl), int(t.ytl)), (int(t.xbr), int(t.ybr)), color=color, thickness=3) 
+        #     cv2.putText(im,str(t.id), (int(t.xtl), int(t.ytl)), 
+        #                 cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2)
+        # cv2.imwrite('figures/tracking/overlap/frame_' + format(i, '04d') + '.jpg', im) 
         
         #Update targets
         targets = new_targets
@@ -132,7 +159,7 @@ def track_max_overlap(bb_det, bb_gt):
     print(summary)
     return summary
 
-def track_max_overlap_of(bb_det, bb_gt, iou_threshold=0.2):
+def track_max_overlap_of(bb_det, bb_gt, iou_threshold=0.05):
     targets = []
     track_id = 0
     acc = mm.MOTAccumulator(auto_id=True)
@@ -143,17 +170,23 @@ def track_max_overlap_of(bb_det, bb_gt, iou_threshold=0.2):
         flow = flowpy.flow_read('./datasets/aicity/AICity_data/train/S03/c010/of/frame_'+ str(gt_dets[0].frame+1).zfill(4) +'.png')
         im = cv2.imread(img_path, cv2.IMREAD_COLOR)
 
+        dets = []
+        for det in frame_dets:
+            if det.score > 0.6:
+                dets.append(det)
+        frame_dets = dets
+
         new_targets = []
         if targets == []:
             # Store the targets of the first frame
-            for detection in frame_dets:
+            for detection in frame_dets: 
                 detection.id = track_id
                 track_id += 1
             new_targets = frame_dets
 
         else:
             #Remove targets that gave been missed multiple times
-            targets = remove_missed_targets(targets, max_misses=4) 
+            targets = remove_missed_targets(targets, max_misses=5) 
 
             #Predict new targets using OF (always assuming forward direction)
             predicted_targets = predict_targets(targets, flow)
@@ -202,15 +235,15 @@ def track_max_overlap_of(bb_det, bb_gt, iou_threshold=0.2):
                     track_id += 1  
                     new_targets = add_new_target(detection, new_targets)             
 
-        #Draw the image and also put the id
-        for t in new_targets:
-            np.random.seed(t.id)
-            c = list(np.random.choice(range(int(256)), size=3)) 
-            color = (int(c[0]), int(c[1]), int(c[2]))
-            cv2.rectangle(im, (int(t.xtl), int(t.ytl)), (int(t.xbr), int(t.ybr)), color=color, thickness=3) 
-            cv2.putText(im,str(t.id), (int(t.xtl), int(t.ytl)), 
-                        cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2)
-        cv2.imwrite('figures/tracking/overlap_of/frame_' + format(i, '04d') + '.jpg', im) 
+        # #Draw the image and also put the id
+        # for t in new_targets:
+        #     np.random.seed(t.id)
+        #     c = list(np.random.choice(range(int(256)), size=3)) 
+        #     color = (int(c[0]), int(c[1]), int(c[2]))
+        #     cv2.rectangle(im, (int(t.xtl), int(t.ytl)), (int(t.xbr), int(t.ybr)), color=color, thickness=3) 
+        #     cv2.putText(im,str(t.id), (int(t.xtl), int(t.ytl)), 
+        #                 cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2)
+        # cv2.imwrite('figures/tracking/overlap_of/frame_' + format(i, '04d') + '.jpg', im) 
         
         #Update targets
         targets = new_targets
@@ -231,38 +264,114 @@ def track_max_overlap_of(bb_det, bb_gt, iou_threshold=0.2):
     return summary
 
 
-def track_kalman(bb_det, bb_gt):
-    mot_tracker = Sort(max_age=2300, min_hits=2, iou_threshold=0.35) #create instance of the SORT tracker
+
+def triplet_inference(patch, model, transform):
+    patch = Image.fromarray(patch)
+    patch = transform(patch)
+
+    with torch.no_grad():
+        descriptor = model.get_embedding(patch.unsqueeze(0))
+
+    return np.array(descriptor.to("cpu"))
+
+def track_kalman(bb_det, bb_gt, max_age=2500, min_hits=2, iou_threshold=0.5, score_threshold=0.95, seq='c010', vis=False, extract_descriptors=False, write=False):
+
+    mot_tracker = Sort(max_age=max_age, min_hits=min_hits, iou_threshold=iou_threshold) #create instance of the SORT tracker
     acc = mm.MOTAccumulator(auto_id=True)
+    frame_tracks = []
 
-    for i, (frame_dets, gt_dets) in enumerate(tqdm(zip(bb_det, bb_gt))):
+    if extract_descriptors:
+        opt = parse_opts()
+        device = torch.device(f"cuda:{opt.gpu}" if opt.use_cuda else "cpu")
 
-        img_path = './datasets/aicity/AICity_data/train/S03/c010/frames/frame_' + str(frame_dets[0].frame+1).zfill(4) + '.png'
-        im = cv2.imread(img_path, cv2.IMREAD_COLOR)
+        embedding_net=Net()
+        model=TripletNet(embedding_net)
+        model=model.to(device)
+        model.eval()
+
+        transform = transforms.Compose([
+                                transforms.Resize((96,96)),
+                                transforms.ToTensor(),
+                                transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[
+                                    0.229, 0.224, 0.225])
+                            ])
+
+        checkpoint = torch.load('models/car_compare4.pth', map_location='cpu')
+        model.load_state_dict(checkpoint['model_state_dict'], False)
+
+
+    for i, (frame_dets, gt_dets) in enumerate(zip(bb_det, bb_gt)):
 
         # Update Kalman tracker and obtain new prediction
         # Dets should be an array of bboxes (x1,y1,x2,y2,score)
-        #dets = np.array([det.bbox_score for det in frame_dets])
-        dets = []
-        for det in frame_dets:
-            if det.score > 0.8:
-                dets.append(det)
+
+        # Filter detections
+        if i == 0:
+            dets = []
+            for det in frame_dets:
+                if det.score > score_threshold and det.area > 3500: 
+                    dets.append(det)
+        else: 
+            dets = []
+            for det in frame_dets:
+                if det.score > score_threshold and det.area > 3500: 
+                    parked = False
+                    for t in trackers:
+                        iou = iou_bbox(det.bbox, [t[0], t[1], t[2], t[3]])
+                        if iou > 0.95:
+                            parked = True
+                            break
+                    if not parked:
+                        dets.append(det)
+
         dets = np.array([det.bbox_score for det in dets])
 
-        trackers = mot_tracker.update(dets)
+        # Track using kalman
+        if dets != []:
+            trackers = mot_tracker.update(dets)
+        else:
+            trackers = mot_tracker.update(np.empty((0, 5)))
 
         # Draw the image and also put the id
-        # for t in trackers:
-        #     np.random.seed(int(t[4]))
-        #     c = list(np.random.choice(range(int(256)), size=3)) 
-        #     color = (int(c[0]), int(c[1]), int(c[2]))
-        #     cv2.rectangle(im, (int(t[0]),int(t[1])), (int(t[2]), int(t[3])), color, 3) 
-        #     cv2.putText(im,str(int(t[4])), (int(t[0]),int(t[1])), 
-        #                 cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2)
-        
-        # cv2.imwrite('figures/tracking/kalman/frame_' + format(i, '04d') + '.jpg', im) 
+        if write:
+            for t in trackers:
+                np.random.seed(int(t[4]))
+                c = list(np.random.choice(range(int(256)), size=3)) 
+                color = (int(c[0]), int(c[1]), int(c[2]))
+                cv2.rectangle(im, (int(t[0]),int(t[1])), (int(t[2]), int(t[3])), color, 3) 
+                cv2.putText(im,str(int(t[4])), (int(t[0]),int(t[1])), 
+                            cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2)
+            cv2.imwrite('figures/tracking/kalman/'+seq+'/frame_' + format(i, '04d') + '.jpg', im) 
 
-        #Compute distaces and create id arrays
+        # Extract box descriptors
+        if extract_descriptors:
+            track_bbs = []
+            # CAREFUL! Current directory only works for c010
+            # Either frames from other cameras are decompressed or vid cap on the fly
+            # Path is now hardcoded to folder with just one camera!
+            # Change path to datasets/aic19-track1-mtmc-train +"train/S03" + seq ... when having extracted all frames per all cameras!
+            img_path = './datasets/aicity/AICity_data/train/S03/' + seq + '/frames/frame_' + str(frame_dets[0].frame+1).zfill(4) + '.png'
+            im = cv2.imread(img_path, cv2.IMREAD_COLOR)
+
+            for t in trackers:
+                box = BB(0,t[4],'', t[0], t[1], t[2], t[3], 0)
+                patch = im[int(box.bbox[1]):int(box.bbox[3]), int(box.bbox[0]):int(box.bbox[2])]
+                cv2.imshow("win", patch)
+                feat = triplet_inference(patch, model, transform)
+                print(feat)
+                box.feature_vec = feat
+                track_bbs.append(box)
+            frame_tracks.append(track_bbs)
+
+        if vis and i % 10 == 0:
+            d = []
+            for t in trackers:
+                box = BB(0,t[4],'', t[0], t[1], t[2], t[3], 0)
+                d.append(box)
+            plot_detections(d,gt_dets,seq=seq)
+
+
+        # Compute distaces and create id arrays
         gt_ids = [gt.id for gt in gt_dets]
         det_ids = [ t[4] for t in trackers]   
 
@@ -276,8 +385,8 @@ def track_kalman(bb_det, bb_gt):
     mh = mm.metrics.create()
     summary = mh.compute(acc, metrics=['num_frames', 'mota', 'motp', 'idf1'], name='acc')
     print(summary)
-    return summary
 
-
-        
-    
+    if extract_descriptors:
+        return frame_tracks
+    else:
+        return summary

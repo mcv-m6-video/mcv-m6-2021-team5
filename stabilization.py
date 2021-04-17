@@ -4,8 +4,8 @@ from utils.flow import *
 import os
 from scipy.signal import medfilt
 from utils.stabilization import *
-start = 1
-end = 147 # 188 # 142
+start = 32
+end = 236 # 188 # 142
 prev_frame = None
 
 # Resize frame for computational reasons
@@ -16,7 +16,7 @@ frame_dir = "stb_frames_" + str(start) + "_" + str(end) + "_" + str(w) + "_" + s
 if not os.path.exists(frame_dir):
     os.makedirs(frame_dir)
 
-frames_folder = "datasets/stabilization/seq3/"
+frames_folder = "datasets/stabilization/seq1/"
 
 direc = 'forward'
 blk = 32
@@ -28,7 +28,8 @@ acc_total = []
 
 for i in range(start, end):
     # if i == 3 or i == 4:
-    dir_frame = frames_folder + "frame_" + str(str(i).zfill(4)) + ".jpg"
+    # dir_frame = frames_folder + "frame_" + str(str(i).zfill(4)) + ".jpg"
+    dir_frame = frames_folder + str(str(i).zfill(4)) + ".jpg"
     print(dir_frame)
 
     frame_orig = cv2.imread(dir_frame, cv2.IMREAD_COLOR)
@@ -45,10 +46,9 @@ for i in range(start, end):
         # Estimate optical flow
         # Img past: prev frame, img future: frame
         estimated_of = block_matching(prev_frame, frame, direc, blk, bor, met)
-        print(np.shape(estimated_of))
         # dense_of_plot(estimated_of, prev_frame, "frame_" + str(i))
         # arrow_of_plot(estimated_of, prev_frame, "frame_" + str(i), custom_scale=False)
-        stb_frame, acc_t = apply_camera_motion(frame, estimated_of, w, h, acc_t, 'average')
+        stb_frame, acc_t = stabilize_frame(frame, estimated_of, w, h, acc_t, 'average')
         #stb_frame = stb_frame_of(frame, estimated_of, w, h)
         cv2.cvtColor(stb_frame, cv2.COLOR_BGR2RGB)
         cv2.imwrite(frame_dir + "frame_stb_" + str(i) + ".jpg", stb_frame)

@@ -1,3 +1,9 @@
+# # Ignore video and frames dataset
+datasets/aicity/AICity_data/train
+datasets/aic19-track1-mtmc-train
+datasets/VeRi
+datasets/cars
+*.zip
 *json
 detectron2_models
 detectron2_models_2
@@ -7,11 +13,19 @@ outputs_second_iterations
 outputs_third_iterations
 more_outputs
 
-# Ignore video and frames dataset
-datasets/aicity/AICity_data/train/S03/c010/*
-
-# Include txt detections
+# # Include txt detections
 !datasets/aicity/AICity_data/train/S03/c010/det
+
+plots_32_16
+plots_32_64
+plots
+
+old_results
+IMAGES/*
+figures/*
+stb_frames/*
+seq2/*
+FLOW/*
 
 # Created by https://www.toptal.com/developers/gitignore/api/python,jupyternotebooks,vscode,opencv
 # Edit at https://www.toptal.com/developers/gitignore?templates=python,jupyternotebooks,vscode,opencv
@@ -196,5 +210,6 @@ figures/*
 stb_frames/*
 seq2/*
 FLOW/*
-
+datasets/aicity2/*
+*.pth
 # End of https://www.toptal.com/developers/gitignore/api/python,jupyternotebooks,vscode,opencv
