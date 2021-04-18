@@ -302,9 +302,7 @@ def track_kalman(bb_det, bb_gt, max_age=2500, min_hits=2,
         checkpoint = torch.load('models/car_compare4.pth', map_location='cpu')
         model.load_state_dict(checkpoint['model_state_dict'], False)
 
-
-    for i, (frame_dets, gt_dets) in enumerate(zip(bb_det, bb_gt)):
-
+    for i, (frame_dets, gt_dets) in tqdm(enumerate(zip(bb_det, bb_gt))):
         # Update Kalman tracker and obtain new prediction
         # Dets should be an array of bboxes (x1,y1,x2,y2,score)
 
@@ -353,19 +351,45 @@ def track_kalman(bb_det, bb_gt, max_age=2500, min_hits=2,
             # Either frames from other cameras are decompressed or vid cap on the fly
             # Path is now hardcoded to folder with just one camera!
             # Change path to datasets/aic19-track1-mtmc-train +"train/S03" + seq ... when having extracted all frames per all cameras!
-            img_path = './datasets/aicity/AICity_data/train/S03/' + seq + '/frames/frame_' + str(frame_dets[0].frame+1).zfill(4) + '.png'
-            im = cv2.imread(img_path, cv2.IMREAD_COLOR)
+            if frame_dets:
+                img_path = 'datasets/aic19-track1-mtmc-train/train/S03/' + seq + '/frames/frame_' + str(frame_dets[0].frame+1).zfill(4) + '.png'
+                im = cv2.imread(img_path, cv2.IMREAD_COLOR)
+                h, w, c = im.shape
 
-            for t in trackers:
-                box = BB(start_frame+i,t[4],'', t[0], t[1], t[2], t[3], 0)
-                box.set_camera(int(seq[1:]))
-                patch = im[int(box.bbox[1]):int(box.bbox[3]), int(box.bbox[0]):int(box.bbox[2])]
-                cv2.imshow("win", patch)
-                feat = triplet_inference(patch, model, transform)
-                print(feat)
-                box.feature_vec = feat
-                track_bbs.append(box)
-            frame_tracks.append(track_bbs)
+                for t in trackers:
+                    box = BB(start_frame+i,t[4],'', t[0], t[1], t[2], t[3], 0)
+                    box.set_camera(int(seq[1:]))
+                    x1 = int(box.bbox[1])
+                    x2 = int(box.bbox[3])
+                    x3 = int(box.bbox[0])
+                    x4 = int(box.bbox[2])
+                    if x1 < 0: 
+                        print("Coordinate adjustment")
+                        print("From: ", x1)
+                        x1=0
+                        print("To: ", x1)
+                    if x2 > h:
+                        print("Coordinate adjustment")
+                        print("From: ", x2)
+                        x2=h
+                        print("To: ", x2)
+                    if x3 < 0:
+                        print("Coordinate adjustment")
+                        print("From: ", x3)
+                        x3=0
+                        print("To: ", x3)
+                    if x4 > w:
+                        print("Coordinate adjustment")
+                        print("From: ", x4)
+                        x4=w
+                        print("To: ", x4)
+                    patch = im[x1:x2,x3:x4]
+                    feat = triplet_inference(patch, model, transform)
+                    box.feature_vec = feat
+                    track_bbs.append(box)
+                frame_tracks.append(track_bbs)
+            else:
+                print("Warning: I skipped a frame")
 
         if vis and i % 10 == 0:
             d = []

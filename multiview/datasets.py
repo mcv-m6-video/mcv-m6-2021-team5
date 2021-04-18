@@ -381,7 +381,8 @@ class aicityTriplet(Dataset):
             img2 = self.transform(img2)
             img3 = self.transform(img3)
 		# Return triplet of images and label of anchor image for the sake of plotting
-        return (np.array(img1), np.array(img2), np.array(img3)), label1
+        #return (np.array(img1), np.array(img2), np.array(img3)), label1
+        return (np.array(img1), np.array(img2), np.array(img3)), []
 
     def __len__(self):
         return len(self.filename_list)

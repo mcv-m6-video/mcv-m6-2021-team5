@@ -13,11 +13,12 @@ from utils.bb import BB
 import random
 import time
 
-seqs=['c010','c011','c012','c013','c014','c015']
+seqs=['c014']
+#seqs=['c011']
 detector='mask_rcnn' 
 method='kalman'
-#dataset = "datasets/aic19-track1-mtmc-train"
-dataset = "datasets/aicity/AICity_data"
+dataset = "datasets/aic19-track1-mtmc-train"
+#dataset = "datasets/aicity/AICity_data"
 tracks_dict = {}
 
 for seq in seqs: 
@@ -57,8 +58,8 @@ for seq in seqs:
     tracks_dict[seq] = track_kalman(bb_det, bb_gt, max_age=2000, min_hits=4, iou_threshold=0.1, score_threshold=0.8, seq=seq, extract_descriptors=True, start_frame=start)
     toc = time.time()
     print('Seq: '+seq+'| Tracking took: ' + str(toc-tic))
-    with open('tracks_seq_'+seq+'.pkl','wb') as f:
+    with open('datasets/tracks/pretrained_VeRi/tracks_seq_'+seq+'.pkl','wb') as f:
         pkl.dump(tracks_dict[seq], f)
 
-with open('tracks_dict.pkl','wb') as f:
+with open('datasets/tracks/pretrained_VeRi/tracks_dict.pkl','wb') as f:
     pkl.dump(tracks_dict, f)
