@@ -2,7 +2,9 @@ import torch, torchvision
 import detectron2
 import numpy as np
 import os, cv2, random
+import matplotlib
 from matplotlib import pyplot as plt
+matplotlib.use('TkAgg')
 from tqdm import tqdm
 import pickle as pkl
 
@@ -15,18 +17,20 @@ from detectron2 import model_zoo
 
 from detectron2_tools.io import detectronReader
 from utils.plotting import plot_detections
+from evaluation.iou import iou_bbox
 from evaluation.ap import mean_average_precision
 from utils.reader import AnnotationReader
 from tracking.tracking import track_max_overlap, track_kalman 
-from utils.bb import BB
+from utils.bb import BB, Tracklet
 import random
 import time
-import networkx as nx
 from sklearn import manifold
+import scipy
+import math
 
-# Function to assign a unique id to each node
+# Function to assign a unique id to each tracklet
 def get_id(track):
-    return "c" + str(track.camera) + "f" + str(t.frame) + "id" + str(track.id)
+    return "c" + str(track.camera) + "id" + str(int(track.id))
 
 def compute_distance(x,y):
     return np.sqrt(np.sum((x-y)**2))
@@ -43,90 +47,136 @@ def scale_to_01_range(x):
     # make the distribution fit [0; 1] by dividing by its range
     return starts_from_zero / value_range
 
-# Parameters
-distance_thresh = 100
+def logprob(gmm_mu, gmm_std, x):
+    # TODO: This is still not the logprob... testing things jeje
+    return np.sum( np.exp(-((gmm_mu - x)**2)/(2*gmm_std)) )/len(gmm_mu)
+
+# # Parameters
+# distance_thresh = 100
+
+# # Read the detections of all the cameras
+# with open('tracks_seq_c010.pkl', 'rb') as f:
+#     tracks_seq = pkl.load(f)
+
+# descriptors = []
+# targets = []
+# for frame in tracks_seq:
+#     for t in frame: 
+#         descriptors.append(t.feature_vec[0]/np.max(t.feature_vec[0]))
+#         targets.append(int(t.id))
+# classes = np.unique(targets)
+# print(classes)
+# tsne = manifold.TSNE(n_components=2, n_iter=3000).fit_transform(descriptors)
+
+# # extract x and y coordinates representing the positions of the images on T-SNE plot
+# tx = tsne[:, 0]
+# ty = tsne[:, 1]
+
+# tx = scale_to_01_range(tx)
+# ty = scale_to_01_range(ty)
+
+# # initialize a matplotlib plot
+# fig = plt.figure()
+# ax = fig.add_subplot(111)
+
+# # for every class, we'll add a scatter plot separately
+# for label in classes:
+#     # find the samples of the current class in the data
+#     indices = [i for i, l in enumerate(targets) if l == label]
+
+#     # extract the coordinates of the points of this class only
+#     current_tx = np.take(tx, indices)
+#     current_ty = np.take(ty, indices)
+
+#     np.random.seed(int(label))
+#     c = list(np.random.choice(range(int(256)), size=3))
+#     color = np.array([int(c[2]), int(c[1]), int(c[0])]).reshape(1,3)
+    
+#     # add a scatter plot with the corresponding color and label
+#     ax.scatter(current_tx, current_ty, c=color/255.0, label=label)
+
+# # build a legend using the labels we set previously
+# ax.legend(loc='best')
+
+# # finally, show the plot
+# plt.show()
+
 
 # Read the detections of all the cameras
-with open('tracks_seq_c010.pkl', 'rb') as f:
-    tracks_seq = pkl.load(f)
+cams =['c010','c011','c012','c013','c015']
+tracks_dict = {}
+frame_limits = {}
+for cam in cams:
+    with open('datasets/tracks/pretrained_VeRi/tracks_seq_'+cam+'.pkl', 'rb') as f:
+        tracks_dict[cam] = pkl.load(f)
+        frame_limits[cam] = (int(tracks_dict[cam][0][0].frame),int(tracks_dict[cam][-1][0].frame))
 
-descriptors = []
-targets = []
-for frame in tracks_seq:
-    for t in frame: 
-        descriptors.append(t.feature_vec[0]/np.max(t.feature_vec[0]))
-        targets.append(int(t.id))
-classes = np.unique(targets)
-print(classes)
-tsne = manifold.TSNE(n_components=2, n_iter=3000).fit_transform(descriptors)
+# Get the frame boundaries
+init_frame = np.min( [frame_limits[cam][0] for cam in cams] )
+last_frame = np.max( [frame_limits[cam][1] for cam in cams] )
+num_frames = last_frame-init_frame
 
-# extract x and y coordinates representing the positions of the images on T-SNE plot
-tx = tsne[:, 0]
-ty = tsne[:, 1]
+# Load GT for each camera
+gt_dict = {}
+for cam in cams:
+    gt_reader = AnnotationReader('datasets/aicity/AICity_data/train/S03/'+cam+'/gt/gt.txt')
+    gt = gt_reader.get_bboxes_per_frame(classes=['car'])
+    start, end = list(gt.keys())[0], list(gt.keys())[-1]
+    bb_gt = []
+    for frame in range(start,end):
+        boxes = []
+        if frame not in gt.keys():
+            bb_gt.append([])
+            continue
+        for box in gt[frame]:
+            boxes.append(box)
+        bb_gt.append(boxes)
+    gt_dict[cam] = bb_gt
 
-tx = scale_to_01_range(tx)
-ty = scale_to_01_range(ty)
 
-# initialize a matplotlib plot
-fig = plt.figure()
-ax = fig.add_subplot(111)
+# Create the database
+tracklets = {}
 
-# for every class, we'll add a scatter plot separately
-for label in classes:
-    # find the samples of the current class in the data
-    indices = [i for i, l in enumerate(targets) if l == label]
+# At each frame, get all the cameras and add them to the database
+for i in range(0, num_frames):
+    frame_number = init_frame + i
+    for cam in cams:
+        # Check if frame number is between the limits of each camera
+        if frame_number < frame_limits[cam][0] or frame_number > frame_limits[cam][1]:
+            continue
 
-    # extract the coordinates of the points of this class only
-    current_tx = np.take(tx, indices)
-    current_ty = np.take(ty, indices)
+        # Get the tracks at the corresponding frame
+        cam_frame_idx = frame_number - frame_limits[cam][0]
+        tracks = tracks_dict[cam][ cam_frame_idx ]
+        
+        # Compare to gt
+        frame_gt = gt_dict[cam][cam_frame_idx]
 
-    np.random.seed(int(label))
-    c = list(np.random.choice(range(int(256)), size=3))
-    color = np.array([int(c[2]), int(c[1]), int(c[0])]).reshape(1,3)
-    
-    # add a scatter plot with the corresponding color and label
-    ax.scatter(current_tx, current_ty, c=color/255.0, label=label)
+        # Update the corresponding tracklet 
+        for t in tracks:
+            if get_id(t) not in tracklets.keys():
+                tl = Tracklet(get_id(t), t)
+                tracklets[get_id(t)] = tl
+            else:
+                tracklets[get_id(t)].update_gmm(t)
 
-# build a legend using the labels we set previously
-ax.legend(loc='best')
 
-# finally, show the plot
+# Run matching algorithm
+prob_matrix = np.zeros((len(tracklets), len(tracklets)))
+for ii, query in enumerate(tracklets.values()):
+    logprobs = []
+    for jj, tl in enumerate(tracklets.values()):
+        if query.camera == tl.camera:
+            continue
+        lp = logprob(query.gmm_mu, query.gmm_std, tl.gmm_mu)
+        logprobs.append(lp)
+        prob_matrix[ii,jj] = lp
+    idx = np.argmax(logprobs)
+    if logprobs[idx] > 0.06:
+        prob_matrix[ii,idx] = 1
+    # plt.plot(logprobs)
+    # plt.show()
+
+plt.imshow(prob_matrix, cmap='gray')
 plt.show()
 
-
-
-
-
-# tracks_dict = {}
-# tracks_dict['c010'] = tracks_seq
-
-# cams =['c010']#,'c011','c012','c013','c014','c015']
-
-# # Start with the camera with the lowest frame number
-# start = np.min( [tracks_dict[cam][0][0].frame for cam in cams] )
-# end = np.max( [tracks_dict[cam][-1][0].frame for cam in cams] )
-
-# print(start)
-# print(end)
-
-# # Car database:
-# db = nx.Graph()
-# start=0
-# end=20
-
-# # At each frame, get all the cameras and add them to the database
-# for i in range(start,end):
-#     for cam in cams:
-#         tracks = tracks_dict[cam][i]
-#         for t in tracks: 
-#             db.add_node(get_id(t), descriptor=t.feature_vec, frame=t.frame, bbox=t.bbox)
-#             for node in db:
-#                 d = compute_distance(t.feature_vec, db.nodes[node]["descriptor"])
-#                 if d < 0.1:
-#                     db.add_edge(get_id(t), node, distance=d)
-
-# pos=nx.spring_layout(db)
-# nx.draw_networkx(db,pos, with_labels=True)
-# labels = nx.get_edge_attributes(db,'distance')
-# nx.draw_networkx_edge_labels(db,pos,edge_labels=labels)
-# plt.show()            

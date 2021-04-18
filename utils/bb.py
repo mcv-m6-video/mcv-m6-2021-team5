@@ -1,4 +1,5 @@
 import numpy as np
+import math
 
 class BB:
 
@@ -55,22 +56,39 @@ class BB:
         self.camera = cam
 
 
-class tracklet:
+class Tracklet:
 
-    def __init__(self, local_id, camera, vec):
-        self.local_id = local_id
-        self.gmm_std = np.zeros(np.shape(vec))
-        self.gmm_mu = vec
+    def __init__(self, id, t):
+        # Tracklet params
+        self.local_id = id
+        self.camera = t.camera
+        self.global_id = -1
         self.N = 1.0
         self.frames = []
 
-    def update_gmm(self, vec, frame):
+        # Normalize the features
+        vec_norm = t.feature_vec[0]/np.max(t.feature_vec[0])
+
+        # Tracklet model
+        self.feature_vecs = []
+        self.feature_vecs.append(vec_norm)
+        self.frames.append(t.frame)
+        self.gmm_std = np.zeros(np.shape(vec_norm))
+        self.gmm_mu = vec_norm
+        
+
+    def update_gmm(self, t):
         # Update the frames
-        self.frames.append(frame)
+        self.frames.append(t.frame)
         self.N += 1
 
         # Update the GMM mean
-        self.gmm_mu = (self.gmm_mu*(N-1) + vec)/self.N
+        vec_norm = t.feature_vec[0]/np.max(t.feature_vec[0])
+        self.gmm_mu = (self.gmm_mu*(self.N-1) + vec_norm)/self.N
 
-        # Update the GMM variance
+        # Update the GMM variance (TODO: Online method)
+        self.feature_vecs.append(vec_norm)
+        self.gmm_std = np.var(self.feature_vecs, axis=0, ddof=1)
+    
+    def match_tracklet(self, global_id, tracklet_id):
         print("TO DO")
