@@ -1,3 +1,5 @@
+import numpy as np
+
 class BB:
 
     def __init__(self, frame, id, label, xtl, ytl, xbr, ybr, score):
@@ -51,3 +53,24 @@ class BB:
 
     def set_camera(self, cam):
         self.camera = cam
+
+
+class tracklet:
+
+    def __init__(self, local_id, camera, vec):
+        self.local_id = local_id
+        self.gmm_std = np.zeros(np.shape(vec))
+        self.gmm_mu = vec
+        self.N = 1.0
+        self.frames = []
+
+    def update_gmm(self, vec, frame):
+        # Update the frames
+        self.frames.append(frame)
+        self.N += 1
+
+        # Update the GMM mean
+        self.gmm_mu = (self.gmm_mu*(N-1) + vec)/self.N
+
+        # Update the GMM variance
+        print("TO DO")
