@@ -1,47 +1,58 @@
 import cv2
-import numpy as np
+from utils.bm import block_matching
+from utils.flow import *
+import os
 from scipy.signal import medfilt
+from utils.stabilization import *
+start = 32
+end = 236 # 188 # 142
+prev_frame = None
 
-def pol2cart(rho, phi):
-    x = rho * np.cos(phi)
-    y = rho * np.sin(phi)
-    return(x, y)
+# Resize frame for computational reasons
+w = 600 # 480
+h = 350 # 270
 
-def stb_frame_of(frame, estimated_of, w, h):
-    mag, ang = cv2.cartToPolar(estimated_of[:,:,0], estimated_of[:,:,1])
-    uniques, counts = np.unique(mag, return_counts=True)
-    mc_mag = uniques[counts.argmax()]
+frame_dir = "stb_frames_" + str(start) + "_" + str(end) + "_" + str(w) + "_" + str(h) + "/"
+if not os.path.exists(frame_dir):
+    os.makedirs(frame_dir)
 
-    uniques, counts = np.unique(ang, return_counts=True)
-    mc_ang = uniques[counts.argmax()]
+frames_folder = "datasets/stabilization/seq1/"
 
-    u, v = pol2cart(mc_mag, mc_ang)
+direc = 'forward'
+blk = 32
+bor = 16
+met = "SSD"
 
-    affine_H = np.float32([[1, 0, -v],[0,1,-u]])
+acc_t = np.zeros(2)
+acc_total = []
 
-    frame_stabilized = cv2.warpAffine(frame, affine_H, (w, h))
+for i in range(start, end):
+    # if i == 3 or i == 4:
+    # dir_frame = frames_folder + "frame_" + str(str(i).zfill(4)) + ".jpg"
+    dir_frame = frames_folder + str(str(i).zfill(4)) + ".jpg"
+    print(dir_frame)
+
+    frame_orig = cv2.imread(dir_frame, cv2.IMREAD_COLOR)
+    # cv2.imshow("current frame", frame_orig)
+    # cv2.waitKey(0)
+    # cv2.destroyAllWindows()
+
+    frame = cv2.resize(frame_orig, (w, h), interpolation=cv2.INTER_AREA)
+
+    # First frame case
+    if i == start:
+        frame_stb = frame
+    else:
+        # Estimate optical flow
+        # Img past: prev frame, img future: frame
+        estimated_of = block_matching(prev_frame, frame, direc, blk, bor, met)
+        # dense_of_plot(estimated_of, prev_frame, "frame_" + str(i))
+        # arrow_of_plot(estimated_of, prev_frame, "frame_" + str(i), custom_scale=False)
+        stb_frame, acc_t = stabilize_frame(frame, estimated_of, w, h, acc_t, 'average')
+        #stb_frame = stb_frame_of(frame, estimated_of, w, h)
+        cv2.cvtColor(stb_frame, cv2.COLOR_BGR2RGB)
+        cv2.imwrite(frame_dir + "frame_stb_" + str(i) + ".jpg", stb_frame)
     
-    return frame_stabilized
-
-def stabilize_frame(frame, optical_flow, w, h, acc_t, method='average'):
-
-    if method == 'average':
-        # Average
-        average_optical_flow = - np.array(optical_flow.mean(axis=0).mean(axis=0), dtype=np.float32)
-        acc_t += average_optical_flow
-        H = np.float32([[1, 0, acc_t[0]], [0, 1, acc_t[1]]])
-        frame_stabilized = cv2.warpAffine(frame, H, (w, h))
-
-    if method == 'med_average':
-        # Median
-        optical_flow = optical_flow.flatten().reshape(h * w, 2)
-        np.random.shuffle(optical_flow)
-        optical_flow[:,0] = medfilt(optical_flow[:,0], 5)
-        optical_flow[:,1] = medfilt(optical_flow[:,1], 5)
-        # Average
-        average_optical_flow = np.array(-optical_flow.mean(axis=0), dtype=np.float32)
-        acc_t += average_optical_flow
-        H = np.float32([[1, 0, acc_t[0]], [0, 1, acc_t[1]]])
-        frame_stabilized = cv2.warpAffine(frame, H, (w, h))
-
-    return frame_stabilized, acc_t
+    # Update previous frame for the next iteration
+    prev_frame = frame
+    acc_total.append(acc_t)

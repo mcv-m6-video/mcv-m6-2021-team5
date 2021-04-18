@@ -212,4 +212,5 @@ seq2/*
 FLOW/*
 datasets/aicity2/*
 *.pth
+check_pickles.py
 # End of https://www.toptal.com/developers/gitignore/api/python,jupyternotebooks,vscode,opencv

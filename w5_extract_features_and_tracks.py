@@ -13,7 +13,7 @@ from utils.bb import BB
 import random
 import time
 
-seqs=['c014']
+seqs=['c010']
 #seqs=['c011']
 detector='mask_rcnn' 
 method='kalman'
