@@ -28,6 +28,7 @@ from sklearn import manifold
 import scipy
 import math
 import motmetrics as mm
+from sklearn.decomposition import PCA
 
 # Function to assign a unique id to each tracklet
 def get_id(track):
@@ -53,8 +54,25 @@ def logprob(gmm_mu, gmm_var, x):
     return np.sum( np.exp(-((gmm_mu - x)**2)/(2*gmm_var)) )/len(gmm_mu)
 
 def bhattacharyya(gmm_mu1, gmm_var1, gmm_mu2, gmm_var2):
-    epsilon = np.diag((gmm_var1+gmm_var2)/2)
-    return (1/8)*(gmm_mu1-gmm_mu2)@np.lianlg.inv(epsilon)@(gmm_mu1-gmm_mu2)+(1/2)*math.log(np.linalg.det(epsilon)/math.sqrt(np.prod(gmm_var1)*np.prod(gmm_var2)))
+    t0 = time.time()
+    epsilon_1d = (gmm_var1+gmm_var2)/2
+    epsilon = np.diag(epsilon_1d)
+    if np.count_nonzero(epsilon_1d) != len(gmm_var1):
+        return 10000000
+    inv_epsilon = np.diag(1/epsilon_1d)
+    t1 = time.time()
+    #print(t1-t0)
+    term1 = (1/8)*(gmm_mu1-gmm_mu2)@inv_epsilon@(gmm_mu1-gmm_mu2).T
+    #print('Term 1:' + str(term1))
+    t2 = time.time()
+    #print(t2-t1)
+    t3 = time.time()
+    num = math.sqrt(np.prod(gmm_var1[gmm_var1!=0])*np.prod(gmm_var2[gmm_var2!=0]))
+    den = np.prod(epsilon_1d[epsilon_1d!=0])
+    term2 = (1/2)*math.log(num/den)
+    #print('Term 2:' + str(term2))
+    #print(time.time()-t3)
+    return term1+term2
 
 # # Parameters
 # distance_thresh = 100
@@ -139,6 +157,24 @@ for cam in cams:
         bb_gt.append(boxes)
     gt_dict[cam] = bb_gt
 
+#Load all feature vectors to fit a PCA
+embeddings_list = []
+for i in range(0, num_frames):
+    frame_number = init_frame + i
+    for cam in cams:
+        if frame_number < frame_limits[cam][0] or frame_number > frame_limits[cam][1]:
+            continue
+
+        # Get the tracks at the corresponding frame
+        cam_frame_idx = frame_number - frame_limits[cam][0]
+        tracks = tracks_dict[cam][ cam_frame_idx ]
+
+        for t in tracks:
+            embeddings_list.append(t.feature_vec)
+embeddings_vec = np.array(embeddings_list)
+embeddings_vec = np.squeeze(embeddings_vec)
+pca = PCA(n_components=20)
+pca.fit(embeddings_vec)
 
 # Create the database
 tracklets = {}
@@ -158,27 +194,40 @@ for i in range(0, num_frames):
         # Update the corresponding tracklet 
         for t in tracks:
             if get_id(t) not in tracklets.keys():
+                t.feature_vec = pca.transform(t.feature_vec)
                 tl = Tracklet(get_id(t), t)
                 tracklets[get_id(t)] = tl
                 tl.global_id = global_id
                 global_id += 1
             else:
+                t.feature_vec = pca.transform(t.feature_vec)
                 tracklets[get_id(t)].update_gmm(t)
-
 
 # Run matching algorithm
 prob_matrix = np.zeros((len(tracklets), len(tracklets)))
 for ii, query in enumerate(tracklets.values()):
+    print(ii)
     logprobs = []
+    b_distances = []
     for jj, tl in enumerate(tracklets.values()):
         if query.camera == tl.camera:
             continue
-        lp = logprob(query.gmm_mu, query.gmm_var, tl.gmm_mu)
-        logprobs.append(lp)
-        prob_matrix[ii,jj] = lp
-    idx = np.argmax(logprobs)
-    if logprobs[idx] > 0.09:
-        prob_matrix[ii,idx] = 1
+        #lp = logprob(query.gmm_mu, query.gmm_var, tl.gmm_mu)
+        bd = bhattacharyya(query.gmm_mu, query.gmm_var, tl.gmm_mu, tl.gmm_var)
+        #logprobs.append(lp)
+        b_distances.append(bd)
+        #prob_matrix[ii,jj] = lp
+        #prob_matrix[ii,jj] = bd
+    #idx = np.argmax(logprobs)
+    idx = np.argmin(b_distances)
+    # if logprobs[idx] > 0.09:
+    #     prob_matrix[ii,idx] = 1
+    #     print('Match! tracklet ids:')
+    #     print(tl.global_id)
+    #     print(query.global_id)
+    #     tl.global_id = query.global_id
+    if b_distances[idx] < 23:
+        #prob_matrix[ii,idx] = 1
         print('Match! tracklet ids:')
         print(tl.global_id)
         print(query.global_id)
@@ -186,8 +235,8 @@ for ii, query in enumerate(tracklets.values()):
     else:
         query.global_id = -1
 
-plt.imshow(prob_matrix, cmap='gray')
-plt.show()
+#plt.imshow(prob_matrix, cmap='gray')
+#plt.show()
 
 
 
