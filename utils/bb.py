@@ -98,7 +98,7 @@ class Tracklet:
         self.gmm_mu += delta / self.N
         delta2 = vec_norm - self.gmm_mu
         self.gmm_M2 += delta * delta2
-        self.gmm_var = M2/self.N
+        self.gmm_var = self.gmm_M2/self.N
 
         
     
