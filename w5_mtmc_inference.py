@@ -108,7 +108,7 @@ cams =['c010','c011','c012','c013','c015']
 tracks_dict = {}
 frame_limits = {}
 for cam in cams:
-    with open('datasets/tracks/pretrained_VeRi/tracks_seq_'+cam+'.pkl', 'rb') as f:
+    with open('datasets/tracks/pretrained_VeRi_th095/tracks_seq_'+cam+'.pkl', 'rb') as f:
         tracks_dict[cam] = pkl.load(f)
         frame_limits[cam] = (int(tracks_dict[cam][0][0].frame),int(tracks_dict[cam][-1][0].frame))
 
@@ -120,8 +120,8 @@ num_frames = last_frame-init_frame
 # Load GT for each camera
 gt_dict = {}
 for cam in cams:
-    #gt_reader = AnnotationReader('datasets/aicity/AICity_data/train/S03/'+cam+'/gt/gt.txt')
-    gt_reader = AnnotationReader('datasets/aic19-track1-mtmc-train/train/S03/'+cam+'/gt/gt.txt')
+    gt_reader = AnnotationReader('datasets/aicity/AICity_data/train/S03/'+cam+'/gt/gt.txt')
+    #gt_reader = AnnotationReader('datasets/aic19-track1-mtmc-train/train/S03/'+cam+'/gt/gt.txt')
     gt = gt_reader.get_bboxes_per_frame(classes=['car'])
     start, end = list(gt.keys())[0], list(gt.keys())[-1]
     bb_gt = []
@@ -135,6 +135,8 @@ for cam in cams:
         bb_gt.append(boxes)
     gt_dict[cam] = bb_gt
 
+for cam in cams:
+    print(frame_limits[cam])
 
 # Create the database
 tracklets = {}
@@ -173,7 +175,7 @@ for ii, query in enumerate(tracklets.values()):
         logprobs.append(lp)
         prob_matrix[ii,jj] = lp
     idx = np.argmax(logprobs)
-    if logprobs[idx] > 0.09:
+    if logprobs[idx] > 0.0:
         prob_matrix[ii,idx] = 1
         print('Match! tracklet ids:')
         print(tl.global_id)
