@@ -73,8 +73,9 @@ class Tracklet:
         self.feature_vecs = []
         self.feature_vecs.append(vec_norm)
         self.frames.append(t.frame)
-        self.gmm_std = np.zeros(np.shape(vec_norm))
+        self.gmm_var = np.zeros(np.shape(vec_norm))
         self.gmm_mu = vec_norm
+        self.gmm_M2 = np.zeros(np.shape(vec_norm))
         
 
     def update_gmm(self, t):
@@ -82,13 +83,24 @@ class Tracklet:
         self.frames.append(t.frame)
         self.N += 1
 
-        # Update the GMM mean
+        #Normalize embedding vector
         vec_norm = t.feature_vec[0]/np.max(t.feature_vec[0])
-        self.gmm_mu = (self.gmm_mu*(self.N-1) + vec_norm)/self.N
+
+        # Update the GMM mean
+        # self.gmm_mu = (self.gmm_mu*(self.N-1) + vec_norm)/self.N
 
         # Update the GMM variance (TODO: Online method)
-        self.feature_vecs.append(vec_norm)
-        self.gmm_std = np.var(self.feature_vecs, axis=0, ddof=1)
+        # self.feature_vecs.append(vec_norm)
+        # self.gmm_std = np.var(self.feature_vecs, axis=0, ddof=1)
+
+        #Update mean, variance and M2 with Welford's algorithm
+        delta = vec_norm - self.gmm_mu
+        self.gmm_mu += delta / self.N
+        delta2 = vec_norm - self.gmm_mu
+        self.gmm_M2 += delta * delta2
+        self.gmm_var = self.gmm_M2/self.N
+
+        
     
     def match_tracklet(self, global_id, tracklet_id):
         print("TO DO")

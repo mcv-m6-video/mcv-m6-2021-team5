@@ -48,9 +48,9 @@ def scale_to_01_range(x):
     # make the distribution fit [0; 1] by dividing by its range
     return starts_from_zero / value_range
 
-def logprob(gmm_mu, gmm_std, x):
+def logprob(gmm_mu, gmm_var, x):
     # TODO: This is still not the logprob... testing things jeje
-    return np.sum( np.exp(-((gmm_mu - x)**2)/(2*gmm_std)) )/len(gmm_mu)
+    return np.sum( np.exp(-((gmm_mu - x)**2)/(2*gmm_var)) )/len(gmm_mu)
 
 # # Parameters
 # distance_thresh = 100
@@ -120,7 +120,8 @@ num_frames = last_frame-init_frame
 # Load GT for each camera
 gt_dict = {}
 for cam in cams:
-    gt_reader = AnnotationReader('datasets/aicity/AICity_data/train/S03/'+cam+'/gt/gt.txt')
+    #gt_reader = AnnotationReader('datasets/aicity/AICity_data/train/S03/'+cam+'/gt/gt.txt')
+    gt_reader = AnnotationReader('datasets/aic19-track1-mtmc-train/train/S03/'+cam+'/gt/gt.txt')
     gt = gt_reader.get_bboxes_per_frame(classes=['car'])
     start, end = list(gt.keys())[0], list(gt.keys())[-1]
     bb_gt = []
@@ -168,7 +169,7 @@ for ii, query in enumerate(tracklets.values()):
     for jj, tl in enumerate(tracklets.values()):
         if query.camera == tl.camera:
             continue
-        lp = logprob(query.gmm_mu, query.gmm_std, tl.gmm_mu)
+        lp = logprob(query.gmm_mu, query.gmm_var, tl.gmm_mu)
         logprobs.append(lp)
         prob_matrix[ii,jj] = lp
     idx = np.argmax(logprobs)
