@@ -51,6 +51,10 @@ def logprob(gmm_mu, gmm_var, x):
     # TODO: This is still not the logprob... testing things jeje
     return np.sum( np.exp(-((gmm_mu - x)**2)/(2*gmm_var)) )/len(gmm_mu)
 
+def bhattacharyya(gmm_mu1, gmm_var1, gmm_mu2, gmm_var2):
+    epsilon = np.diag((gmm_var1+gmm_var2)/2)
+    return (1/8)*(gmm_mu1-gmm_mu2)@np.lianlg.inv(epsilon)@(gmm_mu1-gmm_mu2)+(1/2)*math.log(np.linalg.det(epsilon)/math.sqrt(np.prod(gmm_var1)*np.prod(gmm_var2)))
+
 # # Parameters
 # distance_thresh = 100
 
