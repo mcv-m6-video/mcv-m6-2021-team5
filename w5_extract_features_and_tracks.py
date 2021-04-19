@@ -21,7 +21,7 @@ dataset = "datasets/aic19-track1-mtmc-train"
 #dataset = "datasets/aicity/AICity_data"
 tracks_dict = {}
 
-dir_tracks = "pretrained_VeRi_th095"
+dir_tracks = "ourmodel_th095"
 
 start = time.time()
 print(start)
