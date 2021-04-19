@@ -32,8 +32,8 @@ for i in range(0,1):
     for seq in seqs:
         for detector in detectors:
             #Load detections
-            reader = AnnotationReader('datasets/aicity/AICity_data/train/S03/'+seq+'/det/det_'+detector+'.txt')
-            det_rcnn = reader.get_bboxes_per_frame(classes=['car'])
+            # reader = AnnotationReader('datasets/aicity/AICity_data/train/S03/'+seq+'/det/det_'+detector+'.txt')
+            # det_rcnn = reader.get_bboxes_per_frame(classes=['car'])
 
             # Load GT
             gt_reader = AnnotationReader('datasets/aicity/AICity_data/train/S03/'+seq+'/gt/gt.txt')
@@ -50,29 +50,29 @@ for i in range(0,1):
                 for box in gt[frame]:
                     boxes.append(box)
                 bb_gt.append(boxes)
+            print(end-start)
+            # # Fix detections
+            # bb_det = []
+            # for frame in range(start,end):
+            #     boxes = []
+            #     if frame not in det_rcnn.keys():
+            #         bb_det.append([])
+            #         continue
+            #     for box in det_rcnn[frame]:
+            #         boxes.append(box)
+            #     bb_det.append(boxes)
 
-            # Fix detections
-            bb_det = []
-            for frame in range(start,end):
-                boxes = []
-                if frame not in det_rcnn.keys():
-                    bb_det.append([])
-                    continue
-                for box in det_rcnn[frame]:
-                    boxes.append(box)
-                bb_det.append(boxes)
 
+            # #Track detected objects and compare to GT
+            # tic = time.time()
+            # if method == 'overlap':
+            #     track_max_overlap(bb_det, bb_gt)
+            # elif method == 'kalman':
+            #     #track_kalman(bb_det, bb_gt, max_age=random.randint(100, 2000), min_hits=random.randint(0, 10), iou_threshold=random.uniform(0,1), score_threshold=random.uniform(0.8,1))
+            #     #1272 8 0.10943858413660335 0.9669930279617084
+            #     track_kalman(bb_det, bb_gt, max_age=2000, min_hits=4, iou_threshold=0.1, score_threshold=0.96, seq=seq)
+            # else:
+            #     print('Invalid tracking method: overlap or kalman')
 
-            #Track detected objects and compare to GT
-            tic = time.time()
-            if method == 'overlap':
-                track_max_overlap(bb_det, bb_gt)
-            elif method == 'kalman':
-                #track_kalman(bb_det, bb_gt, max_age=random.randint(100, 2000), min_hits=random.randint(0, 10), iou_threshold=random.uniform(0,1), score_threshold=random.uniform(0.8,1))
-                #1272 8 0.10943858413660335 0.9669930279617084
-                track_kalman(bb_det, bb_gt, max_age=2000, min_hits=4, iou_threshold=0.1, score_threshold=0.96, seq=seq)
-            else:
-                print('Invalid tracking method: overlap or kalman')
-
-            toc = time.time()
-            print('Tracking took: ' + str(toc-tic))
+            # toc = time.time()
+            # print('Tracking took: ' + str(toc-tic))

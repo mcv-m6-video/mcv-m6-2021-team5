@@ -17,7 +17,7 @@ from detectron2 import model_zoo
 
 from detectron2_tools.io import detectronReader
 from utils.plotting import plot_detections
-from evaluation.iou import iou_bbox
+from evaluation.iou import iou_bbox, compute_bb_distance
 from evaluation.ap import mean_average_precision
 from utils.reader import AnnotationReader
 from tracking.tracking import track_max_overlap, track_kalman 
@@ -27,6 +27,7 @@ import time
 from sklearn import manifold
 import scipy
 import math
+import motmetrics as mm
 
 # Function to assign a unique id to each tracklet
 def get_id(track):
@@ -141,7 +142,7 @@ for cam in cams:
 
 # Create the database
 tracklets = {}
-
+global_id = 0
 # At each frame, get all the cameras and add them to the database
 for i in range(0, num_frames):
     frame_number = init_frame + i
@@ -153,15 +154,14 @@ for i in range(0, num_frames):
         # Get the tracks at the corresponding frame
         cam_frame_idx = frame_number - frame_limits[cam][0]
         tracks = tracks_dict[cam][ cam_frame_idx ]
-        
-        # Compare to gt
-        frame_gt = gt_dict[cam][cam_frame_idx]
 
         # Update the corresponding tracklet 
         for t in tracks:
             if get_id(t) not in tracklets.keys():
                 tl = Tracklet(get_id(t), t)
                 tracklets[get_id(t)] = tl
+                tl.global_id = global_id
+                global_id += 1
             else:
                 tracklets[get_id(t)].update_gmm(t)
 
@@ -177,11 +177,57 @@ for ii, query in enumerate(tracklets.values()):
         logprobs.append(lp)
         prob_matrix[ii,jj] = lp
     idx = np.argmax(logprobs)
-    if logprobs[idx] > 0.06:
+    if logprobs[idx] > 0.09:
         prob_matrix[ii,idx] = 1
-    # plt.plot(logprobs)
-    # plt.show()
+        print('Match! tracklet ids:')
+        print(tl.global_id)
+        print(query.global_id)
+        tl.global_id = query.global_id
+    else:
+        query.global_id = -1
 
 plt.imshow(prob_matrix, cmap='gray')
 plt.show()
 
+
+
+## Evaluation
+acc = mm.MOTAccumulator(auto_id=True)
+
+# At each frame, get all the detections and assign the global id corresponding to their tracklet
+for i in range(0, num_frames):
+    frame_number = init_frame + i
+    for cam in cams:
+        # Check if frame number is between the limits of each camera
+        if frame_number < frame_limits[cam][0] or frame_number > frame_limits[cam][1]:
+            continue
+
+        # Get the tracks at the corresponding frame
+        cam_frame_idx = frame_number - frame_limits[cam][0]
+        tracks = tracks_dict[cam][ cam_frame_idx ]
+        
+        # Compare to gt
+        frame_gt = gt_dict[cam][cam_frame_idx]
+
+        # Save global tracks in list
+        global_tracks = []
+        for t in tracks:
+            # Check the track and assign its corresponding global id
+            t_id = tracklets[get_id(t)].global_id
+            if t_id != -1:
+                t.id = t_id
+                global_tracks.append(t)
+
+        #Evaluation: Compute distaces and create id arrays
+        gt_ids = [gt.id for gt in frame_gt]
+        det_ids = [detection.id for detection in global_tracks]   
+
+        distances = np.zeros((len(frame_gt), len(global_tracks)))
+        for i, gt in enumerate(frame_gt):
+            for j, detection in enumerate(global_tracks):
+                distances[i,j] = compute_bb_distance(detection, gt)
+        acc.update(gt_ids, det_ids, distances)
+
+mh = mm.metrics.create()
+summary = mh.compute(acc, metrics=['num_frames', 'mota', 'motp', 'idf1'], name='acc')
+print(summary)
