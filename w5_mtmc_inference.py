@@ -57,13 +57,14 @@ def bhattacharyya(gmm_mu1, gmm_var1, gmm_mu2, gmm_var2):
     epsilon_1d = (gmm_var1+gmm_var2)/2
     epsilon = np.diag(epsilon_1d)
     if np.count_nonzero(epsilon_1d) != len(gmm_var1):
-        return 10000000
+        return 1000
     inv_epsilon = np.diag(1/epsilon_1d)
     term1 = (1/8)*(gmm_mu1-gmm_mu2)@inv_epsilon@(gmm_mu1-gmm_mu2).T
     #print('Term 1:' + str(term1))
     num = np.prod(epsilon_1d[epsilon_1d!=0])
     den = math.sqrt(np.prod(gmm_var1[gmm_var1!=0])*np.prod(gmm_var2[gmm_var2!=0]))
     term2 = (1/2)*math.log(num/den)
+    term2 = max(term2, 0.0)
     #print('Term 2:' + str(term2))
     #print(term1+term2)
     return term1+term2
