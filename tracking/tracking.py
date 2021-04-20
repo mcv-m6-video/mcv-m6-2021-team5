@@ -391,6 +391,7 @@ def track_kalman(bb_det, bb_gt, max_age=2500, min_hits=2,
                 frame_tracks.append(track_bbs)
             else:
                 print("Warning: I skipped a frame")
+                frame_tracks.append([])
 
         if vis and i % 10 == 0:
             d = []
