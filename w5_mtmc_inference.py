@@ -126,8 +126,8 @@ num_frames = last_frame-init_frame
 # Load GT for each camera
 gt_dict = {}
 for cam in cams:
-    #gt_reader = AnnotationReader('datasets/aicity/AICity_data/train/S03/'+cam+'/gt/gt.txt')
-    gt_reader = AnnotationReader('datasets/aic19-track1-mtmc-train/train/S03/'+cam+'/gt/gt.txt')
+    gt_reader = AnnotationReader('datasets/aicity/AICity_data/train/S03/'+cam+'/gt/gt.txt')
+    #gt_reader = AnnotationReader('datasets/aic19-track1-mtmc-train/train/S03/'+cam+'/gt/gt.txt')
     gt = gt_reader.get_bboxes_per_frame(classes=['car'])
     start, end = list(gt.keys())[0], list(gt.keys())[-1]
     bb_gt = []
@@ -216,31 +216,32 @@ for ii, query in enumerate(tracklets.values()):
             query.global_id = -1
     elif distance == 'b':
         idx = np.argmin(b_distances)
-        print(b_distances[idx])
-        if b_distances[idx] < 5:
+        if b_distances[idx] < 10:
             tl.global_id = query.global_id
+        else:
+            query.global_id = -1
 
-print(np.max(np.max(distance_image)))
-print(np.min(np.min(distance_image)))
-plt.hist(np.ravel(distance_image), bins='auto')
-plt.show()
-plt.imshow(distance_image, cmap='gray')
-plt.show()
+# print(np.max(np.max(distance_image)))
+# print(np.min(np.min(distance_image)))
+# plt.hist(np.ravel(distance_image), bins='auto')
+# plt.show()
+# plt.imshow(distance_image, cmap='gray')
+# plt.show()
 
 ## Evaluation
 acc = mm.MOTAccumulator(auto_id=True)
 
 # Video capture for each camera
-captures = {}
-for cam in cams:
-    video_cap = cv2.VideoCapture('datasets/aicity/AICity_data/train/S03/'+cam+'/vdo.avi')
-    captures[cam] = video_cap
+# captures = {}
+# for cam in cams:
+#     video_cap = cv2.VideoCapture('datasets/aicity/AICity_data/train/S03/'+cam+'/vdo.avi')
+#     captures[cam] = video_cap
 
 
-    success, input_frame = video_cap.read()
-    for frame_vid in range(2, int(video_n_frames)):
-        # print(frame_vid)
-        success, read_frame = video_cap.read()
+#     success, input_frame = video_cap.read()
+#     for frame_vid in range(2, int(video_n_frames)):
+#         # print(frame_vid)
+#         success, read_frame = video_cap.read()
 
 # At each frame, get all the detections and assign the global id corresponding to their tracklet
 for i in range(0, num_frames):
