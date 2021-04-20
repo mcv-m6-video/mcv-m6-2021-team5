@@ -34,8 +34,14 @@ from sklearn.decomposition import PCA
 def get_id(track):
     return "c" + str(track.camera) + "id" + str(int(track.id))
 
+def get_f_ini(track):
+    return track.frames[0]
+
 def compute_distance(x,y):
     return np.sqrt(np.sum((x-y)**2))
+
+def squared_distance(gmm_mu1, gmm_mu2):
+    return torch.norm(gmm_mu1-gmm_mu2, 2)
 
 def logprob(gmm_mu, gmm_var, x):
     # TODO: This is still not the logprob... testing things jeje
@@ -111,6 +117,8 @@ def bhattacharyya(gmm_mu1, gmm_var1, gmm_mu2, gmm_var2):
 distance = 'lp'
 use_pca = False
 cams =['c010','c011','c012','c013','c014','c015']
+th_lp = 0.5
+th_b = 23
 tracks_dict = {}
 frame_limits = {}
 for cam in cams:
@@ -192,54 +200,166 @@ for i in range(0, num_frames):
 # Run matching algorithm 
 distance_image = np.zeros((len(tracklets), len(tracklets)))
 tracklet_list = list(tracklets.values())
-for ii, query in enumerate(tracklet_list):
+tracklet_list.sort(key=get_f_ini)
+
+untracked = []
+tracked = []
+id_cnt = 0
+for tracklet in tracklet_list:
+    #print(tracklet.frames[0])
+    idx_untracked = -1
+    idx_tracked = -1
+    print('Untracked: ' + str(len(untracked)))
+    print('Tracked: ' + str(len(tracked)))
+
     logprobs = []
     b_distances = []
-    for jj, tl in enumerate(tracklet_list):
-        if query.camera == tl.camera:
-            b_distances.append(math.inf)
-            logprobs.append(0)
-            continue
+    for un in untracked:
+        #Compute smallest distance with untracked tracklets
         if distance == 'lp':
-            lp = logprob(query.gmm_mu, query.gmm_var, tl.gmm_mu)
-            logprobs.append(lp)
-            distance_image[ii,jj] = lp
+            if tracklet.camera == un.camera:
+                logprobs.append(0.0)
+            else:
+                lp = logprob(tracklet.gmm_mu, tracklet.gmm_var, un.gmm_mu)
+                logprobs.append(lp)
+            
         elif distance == 'b':
-            bd = bhattacharyya(query.gmm_mu, query.gmm_var, tl.gmm_mu, tl.gmm_var)
-            b_distances.append(bd)
-            distance_image[ii,jj] = min(bd, 200)
+            if tracklet.camera == un.camera:
+                b_distances.append(10000)
+            else:
+                bd = bhattacharyya(tracklet.gmm_mu, tracklet.gmm_var, un.gmm_mu, un.gmm_var)
+                b_distances.append(bd)
 
-    if distance == 'lp':
+    #Keep smallest distance and index
+    if distance == 'lp' and logprobs:
         idx = np.argmax(logprobs)
-        if logprobs[idx] > 0.5:
-            #if query.camera == tracklet_list[idx].camera
-            query.global_id = tracklet_list[idx].global_id
-        else:
-            query.global_id = -1
+        if logprobs[idx] > th_lp:
+            idx_untracked, min_untracked = idx, logprobs[idx]
 
-    elif distance == 'b':
+    elif distance == 'b' and b_distances:
         idx = np.argmin(b_distances)
-        if b_distances[idx] < 1000000000000:
-            query.global_id = tracklet_list[idx].global_id
-        #else:
-            #query.global_id = -1
+        if b_distances[idx] < th_b:
+            idx_untracked, min_untracked = idx, b_distances[idx]
+    
+    logprobs = []
+    b_distances = []
+    for tr in tracked:
+        #Compute smallest distance with already tracked tracklets
+        if distance == 'lp':
+            if tracklet.camera == un.camera:
+                logprobs.append(0.0)
+            else:
+                lp = logprob(tracklet.gmm_mu, tracklet.gmm_var, tr.gmm_mu)
+                logprobs.append(lp)
+        elif distance == 'b':
+            if tracklet.camera == un.camera:
+                b_distances.append(10000)
+            else:
+                bd = bhattacharyya(tracklet.gmm_mu, tracklet.gmm_var, tr.gmm_mu, tr.gmm_var)
+                b_distances.append(bd)
 
-print(np.max(np.max(distance_image)))
-print(np.min(np.min(distance_image)))
-plt.hist(np.ravel(distance_image), bins='auto')
-plt.show()
-plt.imshow(distance_image, cmap='gray')
-plt.show()
+    #Keep smallest distance
+    if distance == 'lp' and logprobs:
+        idx = np.argmax(logprobs)
+        if logprobs[idx] > th_lp:
+            idx_tracked, min_tracked = idx, logprobs[idx]
+
+    elif distance == 'b' and b_distances:
+        idx = np.argmin(b_distances)
+        if b_distances[idx] < th_b:
+            idx_tracked, min_tracked = idx, b_distances[idx]
+
+    #No match with either untracked or tracked
+    if idx_untracked == -1 and idx_tracked == -1:
+        untracked.append(tracklet)
+    
+    #Match with a tracked tracklet
+    if idx_untracked == -1 and idx_tracked != -1:
+        tracklet.global_id = tracked[idx_tracked].global_id #Assign id of most similar tracklet
+        tracked.append(tracklet)
+    
+    #Match with an untracked tracklet
+    if idx_untracked != -1 and idx_tracked == -1:
+
+        matched_tracklet = untracked.pop(idx_untracked) #Subtracted matched tracklet from untracked list   
+        
+        # Assign a new global id according to count
+        tracklet.global_id = id_cnt
+        matched_tracklet.global_id = id_cnt
+        id_cnt += 1
+
+        #Add both tracklets to tracked list
+        tracked.append(tracklet) 
+        tracked.append(matched_tracklet)
+
+    #Match with both an untracked and a tracked tracklet. Keep the best case
+    if idx_untracked != -1 and idx_tracked != -1:
+        if distance == 'lp' and min_tracked>min_untracked or distance == 'b' and min_tracked<min_untracked:
+            tracklet.global_id = tracked[idx_tracked].global_id
+            tracked.append(tracklet)
+            
+        else:
+            matched_tracklet = untracked.pop(idx_untracked)
+            tracklet.global_id = id_cnt
+            matched_tracklet.global_id = id_cnt
+            id_cnt += 1
+            tracked.append(tracklet)
+            tracked.append(matched_tracklet)
+
+#####
+# for ii, query in enumerate(tracklet_list):
+#     logprobs = []
+#     b_distances = []
+#     untracked = []
+#     tracked = []
+#     #print(query.frames[0])
+#     for jj, tl in enumerate(tracklet_list[:ii]):
+#         if query.camera == tl.camera:
+#             b_distances.append(math.inf)
+#             logprobs.append(0)
+#             continue
+
+#         if distance == 'lp':
+#             lp = logprob(query.gmm_mu, query.gmm_var, tl.gmm_mu)
+#             logprobs.append(lp)
+#             distance_image[ii,jj] = lp
+#         elif distance == 'b':
+#             bd = bhattacharyya(query.gmm_mu, query.gmm_var, tl.gmm_mu, tl.gmm_var)
+#             b_distances.append(bd)
+#             distance_image[ii,jj] = min(bd, 200)
+
+#     if distance == 'lp':
+#         idx = np.argmax(logprobs)
+#         if logprobs[idx] > 0.5:
+#             #if query.camera == tracklet_list[idx].camera
+#             query.global_id = tracklet_list[idx].global_id
+#         else:
+#             query.global_id = query.local_id
+
+#     elif distance == 'b':
+#         idx = np.argmin(b_distances)
+#         if b_distances[idx] < 1000000000000:
+#             query.global_id = tracklet_list[idx].global_id
+#         #else:
+#             #query.global_id = -1
+
+# print(np.max(np.max(distance_image)))
+# print(np.min(np.min(distance_image)))
+# plt.hist(np.ravel(distance_image), bins='auto')
+# plt.show()
+# plt.imshow(distance_image, cmap='gray')
+# plt.show()
 
 ## Evaluation
 acc = mm.MOTAccumulator(auto_id=True)
 
 # Video capture for each camera
-# captures = {}
-# for cam in cams:
-#     video_cap = cv2.VideoCapture('datasets/aicity/AICity_data/train/S03/'+cam+'/vdo.avi')
-#     video_cap.set(1,frame_limits[cam][0])
-#     captures[cam] = video_cap
+captures = {}
+for cam in cams:
+    #video_cap = cv2.VideoCapture('datasets/aicity/AICity_data/train/S03/'+cam+'/vdo.avi')
+    video_cap = cv2.VideoCapture('datasets/aic19-track1-mtmc-train/train/S03/'+cam+'/vdo.avi')
+    video_cap.set(1,frame_limits[cam][0])
+    captures[cam] = video_cap
 
 # At each frame, get all the detections and assign the global id corresponding to their tracklet
 for i in tqdm(range(0, num_frames)):
@@ -265,20 +385,19 @@ for i in tqdm(range(0, num_frames)):
                 t.id = t_id
                 global_tracks.append(t)
 
-
-        # success, img = captures[cam].read()
-        # if success:
-        #     img = plot_detections2(img, global_tracks, frame_gt, show=False)
-        #     cv2.imwrite('/home/eloi/storage/mtmc/'+cam+'/frame_'+str(i).zfill(4)+'.jpg', img)
+        success, img = captures[cam].read()
+        if success:
+            img = plot_detections2(img, global_tracks, frame_gt, show=False)
+            cv2.imwrite('figures/mtmc/'+cam+'/frame_'+str(i).zfill(4)+'.jpg', img)
 
         #Evaluation: Compute distaces and create id arrays
         gt_ids = [gt.id for gt in frame_gt]
         det_ids = [detection.id for detection in global_tracks]   
 
         distances = np.zeros((len(frame_gt), len(global_tracks)))
-        for i, gt in enumerate(frame_gt):
-            for j, detection in enumerate(global_tracks):
-                distances[i,j] = compute_bb_distance(detection, gt)
+        for ii, gt in enumerate(frame_gt):
+            for jj, detection in enumerate(global_tracks):
+                distances[ii,jj] = compute_bb_distance(detection, gt)
         acc.update(gt_ids, det_ids, distances)
 
 mh = mm.metrics.create()
