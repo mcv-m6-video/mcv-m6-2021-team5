@@ -106,12 +106,10 @@ def bhattacharyya(gmm_mu1, gmm_var1, gmm_mu2, gmm_var2):
 # # finally, show the plot
 # plt.show()
 
-    return term1+term2
-
 # Read the detections of all the cameras
 #distance = 'b'
-distance = 'lp'
-use_pca = False
+distance = 'b'
+use_pca = True
 cams =['c010','c011','c012','c013','c014','c015']
 tracks_dict = {}
 frame_limits = {}
@@ -128,8 +126,8 @@ num_frames = last_frame-init_frame
 # Load GT for each camera
 gt_dict = {}
 for cam in cams:
-    gt_reader = AnnotationReader('datasets/aicity/AICity_data/train/S03/'+cam+'/gt/gt.txt')
-    #gt_reader = AnnotationReader('datasets/aic19-track1-mtmc-train/train/S03/'+cam+'/gt/gt.txt')
+    #gt_reader = AnnotationReader('datasets/aicity/AICity_data/train/S03/'+cam+'/gt/gt.txt')
+    gt_reader = AnnotationReader('datasets/aic19-track1-mtmc-train/train/S03/'+cam+'/gt/gt.txt')
     gt = gt_reader.get_bboxes_per_frame(classes=['car'])
     start, end = list(gt.keys())[0], list(gt.keys())[-1]
     bb_gt = []
@@ -218,7 +216,8 @@ for ii, query in enumerate(tracklets.values()):
             query.global_id = -1
     elif distance == 'b':
         idx = np.argmin(b_distances)
-        if b_distances[idx] < 23:
+        print(b_distances[idx])
+        if b_distances[idx] < 5:
             tl.global_id = query.global_id
 
 # print(np.max(np.max(distance_image)))
