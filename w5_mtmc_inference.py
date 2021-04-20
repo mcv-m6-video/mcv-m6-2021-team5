@@ -54,6 +54,9 @@ def bhattacharyya(gmm_mu1, gmm_var1, gmm_mu2, gmm_var2):
     return term1+term2
 
 # Read the detections of all the cameras
+#distance = 'b'
+distance = 'lp'
+use_pca = False
 cams =['c010','c011','c012','c013','c014','c015']
 tracks_dict = {}
 frame_limits = {}
@@ -86,23 +89,24 @@ for cam in cams:
     gt_dict[cam] = bb_gt
 
 #Load all feature vectors to fit a PCA
-embeddings_list = []
-for i in range(0, num_frames):
-    frame_number = init_frame + i
-    for cam in cams:
-        if frame_number < frame_limits[cam][0] or frame_number > frame_limits[cam][1]:
-            continue
+if use_pca:
+    embeddings_list = []
+    for i in range(0, num_frames):
+        frame_number = init_frame + i
+        for cam in cams:
+            if frame_number < frame_limits[cam][0] or frame_number > frame_limits[cam][1]:
+                continue
 
-        # Get the tracks at the corresponding frame
-        cam_frame_idx = frame_number - frame_limits[cam][0]
-        tracks = tracks_dict[cam][ cam_frame_idx ]
+            # Get the tracks at the corresponding frame
+            cam_frame_idx = frame_number - frame_limits[cam][0]
+            tracks = tracks_dict[cam][ cam_frame_idx ]
 
-        for t in tracks:
-            embeddings_list.append(t.feature_vec)
-embeddings_vec = np.array(embeddings_list)
-embeddings_vec = np.squeeze(embeddings_vec)
-pca = PCA(n_components=20)
-pca.fit(embeddings_vec)
+            for t in tracks:
+                embeddings_list.append(t.feature_vec)
+    embeddings_vec = np.array(embeddings_list)
+    embeddings_vec = np.squeeze(embeddings_vec)
+    pca = PCA(n_components=20)
+    pca.fit(embeddings_vec)
 
 # Create the database
 tracklets = {}
@@ -121,41 +125,53 @@ for i in range(0, num_frames):
 
         # Update the corresponding tracklet 
         for t in tracks:
-            if get_id(t) not in tracklets.keys():
+            if use_pca:
                 t.feature_vec = pca.transform(t.feature_vec)
+            if get_id(t) not in tracklets.keys(): 
                 tl = Tracklet(get_id(t), t)
                 tracklets[get_id(t)] = tl
                 tl.global_id = global_id
                 global_id += 1
-            else:
-                t.feature_vec = pca.transform(t.feature_vec)
+            else: 
                 tracklets[get_id(t)].update_gmm(t)
 
+
 # Run matching algorithm 
+distance_image = np.zeros((len(tracklets), len(tracklets)))
 for ii, query in enumerate(tracklets.values()):
     logprobs = []
     b_distances = []
     for jj, tl in enumerate(tracklets.values()):
         if query.camera == tl.camera:
+            b_distances.append(math.inf)
+            logprobs.append(0)
             continue
+        if distance == 'lp':
+            lp = logprob(query.gmm_mu, query.gmm_var, tl.gmm_mu)
+            logprobs.append(lp)
+            distance_image[ii,jj] = lp
+        elif distance == 'b':
+            bd = bhattacharyya(query.gmm_mu, query.gmm_var, tl.gmm_mu, tl.gmm_var)
+            b_distances.append(bd)
+            distance_image[ii,jj] = bd
 
-        lp = logprob(query.gmm_mu, query.gmm_var, tl.gmm_mu)
-        logprobs.append(lp)
+    if distance == 'lp':
+        idx = np.argmax(logprobs)
+        if logprobs[idx] > 0.09:
+            tl.global_id = query.global_id
+        else:
+            query.global_id = -1
+    elif distance == 'b':
+        idx = np.argmin(b_distances)
+        if b_distances[idx] < 23:
+            tl.global_id = query.global_id
 
-        #bd = bhattacharyya(query.gmm_mu, query.gmm_var, tl.gmm_mu, tl.gmm_var)
-        #b_distances.append(bd)
-
-    idx = np.argmax(logprobs)
-    print(np.max(logprobs))
-    if logprobs[idx] > 0.5:
-        tl.global_id = query.global_id
-    else:
-        query.global_id = -1
-
-    # idx = np.argmin(b_distances)
-    # if b_distances[idx] < 23:
-    #     tl.global_id = query.global_id
-
+# print(np.max(np.max(distance_image)))
+# print(np.min(np.min(distance_image)))
+# plt.hist(np.ravel(distance_image), bins='auto')
+# plt.show()
+# plt.imshow(distance_image, cmap='gray')
+# plt.show()
 
 ## Evaluation
 acc = mm.MOTAccumulator(auto_id=True)
