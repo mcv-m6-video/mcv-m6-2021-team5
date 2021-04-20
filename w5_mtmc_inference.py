@@ -55,14 +55,14 @@ def bhattacharyya(gmm_mu1, gmm_var1, gmm_mu2, gmm_var2):
     return term1+term2
 
 # Read the detections of all the cameras
-#distance = 'b'
-distance = 'lp'
-use_pca = False
+distance = 'b'
+#distance = 'lp'
+use_pca = True
 cams =['c010','c011','c012','c013','c014','c015']
 tracks_dict = {}
 frame_limits = {}
 for cam in cams:
-    with open('datasets/tracks/pretrained_VeRi_th095/tracks_seq_'+cam+'.pkl', 'rb') as f:
+    with open('datasets/tracks/ourmodel_th095_v2/tracks_seq_'+cam+'.pkl', 'rb') as f:
         tracks_dict[cam] = pkl.load(f)
         frame_limits[cam] = (int(tracks_dict[cam][0][0].frame),int(tracks_dict[cam][-1][0].frame))
 
@@ -158,7 +158,7 @@ for ii, query in enumerate(tracklets.values()):
 
     if distance == 'lp':
         idx = np.argmax(logprobs)
-        if logprobs[idx] > 0.09:
+        if logprobs[idx] > 0.08:
             tl.global_id = query.global_id
         else:
             query.global_id = -1
@@ -167,15 +167,27 @@ for ii, query in enumerate(tracklets.values()):
         if b_distances[idx] < 23:
             tl.global_id = query.global_id
 
-# print(np.max(np.max(distance_image)))
-# print(np.min(np.min(distance_image)))
-# plt.hist(np.ravel(distance_image), bins='auto')
-# plt.show()
-# plt.imshow(distance_image, cmap='gray')
-# plt.show()
+print(np.max(np.max(distance_image)))
+print(np.min(np.min(distance_image)))
+plt.hist(np.ravel(distance_image), bins='auto')
+plt.show()
+plt.imshow(distance_image, cmap='gray')
+plt.show()
 
 ## Evaluation
 acc = mm.MOTAccumulator(auto_id=True)
+
+# Video capture for each camera
+captures = {}
+for cam in cams:
+    video_cap = cv2.VideoCapture('datasets/aicity/AICity_data/train/S03/'+cam+'/vdo.avi')
+    captures[cam] = video_cap
+
+
+    success, input_frame = video_cap.read()
+    for frame_vid in range(2, int(video_n_frames)):
+        # print(frame_vid)
+        success, read_frame = video_cap.read()
 
 # At each frame, get all the detections and assign the global id corresponding to their tracklet
 for i in range(0, num_frames):
