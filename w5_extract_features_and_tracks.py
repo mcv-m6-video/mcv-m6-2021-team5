@@ -13,7 +13,8 @@ from utils.bb import BB
 import random
 import time
 
-seqs=['c010', 'c011', 'c012', 'c013', 'c014', 'c015']
+# seqs=['c010', 'c011', 'c012', 'c013', 'c014', 'c015']
+seqs=['c014']
 #seqs=['c011']
 detector='mask_rcnn' 
 method='kalman'
@@ -67,5 +68,5 @@ for seq in seqs:
     final = time.time()
     print("Time elapsed: " + str(final- start))
 
-with open('datasets/tracks/' + dir_tracks + '/tracks_dict.pkl','wb') as f:
-    pkl.dump(tracks_dict, f)
+# with open('datasets/tracks/' + dir_tracks + '/tracks_dict.pkl','wb') as f:
+#     pkl.dump(tracks_dict, f)
