@@ -45,14 +45,66 @@ def bhattacharyya(gmm_mu1, gmm_var1, gmm_mu2, gmm_var2):
     epsilon_1d = (gmm_var1+gmm_var2)/2
     epsilon = np.diag(epsilon_1d)
     if np.count_nonzero(epsilon_1d) != len(gmm_var1):
-        return 10000000
+        return 1000
     inv_epsilon = np.diag(1/epsilon_1d)
     term1 = (1/8)*(gmm_mu1-gmm_mu2)@inv_epsilon@(gmm_mu1-gmm_mu2).T
     num = np.prod(epsilon_1d[epsilon_1d!=0])
     den = math.sqrt(np.prod(gmm_var1[gmm_var1!=0])*np.prod(gmm_var2[gmm_var2!=0]))
     term2 = (1/2)*math.log(num/den)
-
+    term2 = max(term2, 0.0)
+    #print('Term 2:' + str(term2))
+    #print(term1+term2)
     return term1+term2
+
+# # Parameters
+# distance_thresh = 100
+
+# # Read the detections of all the cameras
+# with open('tracks_seq_c010.pkl', 'rb') as f:
+#     tracks_seq = pkl.load(f)
+
+# descriptors = []
+# targets = []
+# for frame in tracks_seq:
+#     for t in frame: 
+#         descriptors.append(t.feature_vec[0]/np.max(t.feature_vec[0]))
+#         targets.append(int(t.id))
+# classes = np.unique(targets)
+# print(classes)
+# tsne = manifold.TSNE(n_components=2, n_iter=3000).fit_transform(descriptors)
+
+# # extract x and y coordinates representing the positions of the images on T-SNE plot
+# tx = tsne[:, 0]
+# ty = tsne[:, 1]
+
+# tx = scale_to_01_range(tx)
+# ty = scale_to_01_range(ty)
+
+# # initialize a matplotlib plot
+# fig = plt.figure()
+# ax = fig.add_subplot(111)
+
+# # for every class, we'll add a scatter plot separately
+# for label in classes:
+#     # find the samples of the current class in the data
+#     indices = [i for i, l in enumerate(targets) if l == label]
+
+#     # extract the coordinates of the points of this class only
+#     current_tx = np.take(tx, indices)
+#     current_ty = np.take(ty, indices)
+
+#     np.random.seed(int(label))
+#     c = list(np.random.choice(range(int(256)), size=3))
+#     color = np.array([int(c[2]), int(c[1]), int(c[0])]).reshape(1,3)
+    
+#     # add a scatter plot with the corresponding color and label
+#     ax.scatter(current_tx, current_ty, c=color/255.0, label=label)
+
+# # build a legend using the labels we set previously
+# ax.legend(loc='best')
+
+# # finally, show the plot
+# plt.show()
 
 # Read the detections of all the cameras
 distance = 'b'
@@ -74,8 +126,8 @@ num_frames = last_frame-init_frame
 # Load GT for each camera
 gt_dict = {}
 for cam in cams:
-    gt_reader = AnnotationReader('datasets/aicity/AICity_data/train/S03/'+cam+'/gt/gt.txt')
-    #gt_reader = AnnotationReader('datasets/aic19-track1-mtmc-train/train/S03/'+cam+'/gt/gt.txt')
+    #gt_reader = AnnotationReader('datasets/aicity/AICity_data/train/S03/'+cam+'/gt/gt.txt')
+    gt_reader = AnnotationReader('datasets/aic19-track1-mtmc-train/train/S03/'+cam+'/gt/gt.txt')
     gt = gt_reader.get_bboxes_per_frame(classes=['car'])
     start, end = list(gt.keys())[0], list(gt.keys())[-1]
     bb_gt = []
@@ -164,7 +216,8 @@ for ii, query in enumerate(tracklets.values()):
             query.global_id = -1
     elif distance == 'b':
         idx = np.argmin(b_distances)
-        if b_distances[idx] < 23:
+        print(b_distances[idx])
+        if b_distances[idx] < 5:
             tl.global_id = query.global_id
 
 print(np.max(np.max(distance_image)))
