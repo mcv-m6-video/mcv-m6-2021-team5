@@ -16,7 +16,7 @@ from detectron2.config import get_cfg
 from detectron2 import model_zoo
 
 from detectron2_tools.io import detectronReader
-from utils.plotting import plot_detections
+from utils.plotting import plot_detections, plot_detections2
 from evaluation.iou import iou_bbox, compute_bb_distance
 from evaluation.ap import mean_average_precision
 from utils.reader import AnnotationReader
@@ -107,14 +107,14 @@ def bhattacharyya(gmm_mu1, gmm_var1, gmm_mu2, gmm_var2):
 # plt.show()
 
 # Read the detections of all the cameras
-distance = 'b'
-#distance = 'lp'
-use_pca = True
+#distance = 'b'
+distance = 'lp'
+use_pca = False
 cams =['c010','c011','c012','c013','c014','c015']
 tracks_dict = {}
 frame_limits = {}
 for cam in cams:
-    with open('datasets/tracks/ourmodel_th095_v2/tracks_seq_'+cam+'.pkl', 'rb') as f:
+    with open('datasets/tracks/ourmodel_th095/tracks_seq_'+cam+'.pkl', 'rb') as f:
         tracks_dict[cam] = pkl.load(f)
         frame_limits[cam] = (int(tracks_dict[cam][0][0].frame),int(tracks_dict[cam][-1][0].frame))
 
@@ -191,10 +191,11 @@ for i in range(0, num_frames):
 
 # Run matching algorithm 
 distance_image = np.zeros((len(tracklets), len(tracklets)))
-for ii, query in enumerate(tracklets.values()):
+tracklet_list = list(tracklets.values())
+for ii, query in enumerate(tracklet_list):
     logprobs = []
     b_distances = []
-    for jj, tl in enumerate(tracklets.values()):
+    for jj, tl in enumerate(tracklet_list):
         if query.camera == tl.camera:
             b_distances.append(math.inf)
             logprobs.append(0)
@@ -206,27 +207,29 @@ for ii, query in enumerate(tracklets.values()):
         elif distance == 'b':
             bd = bhattacharyya(query.gmm_mu, query.gmm_var, tl.gmm_mu, tl.gmm_var)
             b_distances.append(bd)
-            distance_image[ii,jj] = bd
+            distance_image[ii,jj] = min(bd, 200)
 
     if distance == 'lp':
         idx = np.argmax(logprobs)
-        if logprobs[idx] > 0.08:
-            tl.global_id = query.global_id
-        else:
-            query.global_id = -1
-    elif distance == 'b':
-        idx = np.argmin(b_distances)
-        if b_distances[idx] < 10:
-            tl.global_id = query.global_id
+        if logprobs[idx] > 0.5:
+            #if query.camera == tracklet_list[idx].camera
+            query.global_id = tracklet_list[idx].global_id
         else:
             query.global_id = -1
 
-# print(np.max(np.max(distance_image)))
-# print(np.min(np.min(distance_image)))
-# plt.hist(np.ravel(distance_image), bins='auto')
-# plt.show()
-# plt.imshow(distance_image, cmap='gray')
-# plt.show()
+    elif distance == 'b':
+        idx = np.argmin(b_distances)
+        if b_distances[idx] < 1000000000000:
+            query.global_id = tracklet_list[idx].global_id
+        #else:
+            #query.global_id = -1
+
+print(np.max(np.max(distance_image)))
+print(np.min(np.min(distance_image)))
+plt.hist(np.ravel(distance_image), bins='auto')
+plt.show()
+plt.imshow(distance_image, cmap='gray')
+plt.show()
 
 ## Evaluation
 acc = mm.MOTAccumulator(auto_id=True)
@@ -235,16 +238,11 @@ acc = mm.MOTAccumulator(auto_id=True)
 # captures = {}
 # for cam in cams:
 #     video_cap = cv2.VideoCapture('datasets/aicity/AICity_data/train/S03/'+cam+'/vdo.avi')
+#     video_cap.set(1,frame_limits[cam][0])
 #     captures[cam] = video_cap
 
-
-#     success, input_frame = video_cap.read()
-#     for frame_vid in range(2, int(video_n_frames)):
-#         # print(frame_vid)
-#         success, read_frame = video_cap.read()
-
 # At each frame, get all the detections and assign the global id corresponding to their tracklet
-for i in range(0, num_frames):
+for i in tqdm(range(0, num_frames)):
     frame_number = init_frame + i
     for cam in cams:
         # Check if frame number is between the limits of each camera
@@ -267,6 +265,12 @@ for i in range(0, num_frames):
                 t.id = t_id
                 global_tracks.append(t)
 
+
+        # success, img = captures[cam].read()
+        # if success:
+        #     img = plot_detections2(img, global_tracks, frame_gt, show=False)
+        #     cv2.imwrite('/home/eloi/storage/mtmc/'+cam+'/frame_'+str(i).zfill(4)+'.jpg', img)
+
         #Evaluation: Compute distaces and create id arrays
         gt_ids = [gt.id for gt in frame_gt]
         det_ids = [detection.id for detection in global_tracks]   
@@ -278,5 +282,5 @@ for i in range(0, num_frames):
         acc.update(gt_ids, det_ids, distances)
 
 mh = mm.metrics.create()
-summary = mh.compute(acc, metrics=['num_frames', 'mota', 'motp', 'idf1'], name='acc')
+summary = mh.compute(acc, metrics=['num_frames', 'mota', 'motp', 'idf1', 'idp', 'idr'], name='acc')
 print(summary)
