@@ -37,96 +37,24 @@ def get_id(track):
 def compute_distance(x,y):
     return np.sqrt(np.sum((x-y)**2))
 
-# scale and move the coordinates so they fit [0; 1] range
-def scale_to_01_range(x):
-    # compute the distribution range
-    value_range = (np.max(x) - np.min(x))
-
-    # move the distribution so that it starts from zero
-    # by extracting the minimal value from all its values
-    starts_from_zero = x - np.min(x)
-
-    # make the distribution fit [0; 1] by dividing by its range
-    return starts_from_zero / value_range
-
 def logprob(gmm_mu, gmm_var, x):
     # TODO: This is still not the logprob... testing things jeje
     return np.sum( np.exp(-((gmm_mu - x)**2)/(2*gmm_var)) )/len(gmm_mu)
 
 def bhattacharyya(gmm_mu1, gmm_var1, gmm_mu2, gmm_var2):
-    t0 = time.time()
     epsilon_1d = (gmm_var1+gmm_var2)/2
     epsilon = np.diag(epsilon_1d)
     if np.count_nonzero(epsilon_1d) != len(gmm_var1):
         return 10000000
     inv_epsilon = np.diag(1/epsilon_1d)
-    t1 = time.time()
-    #print(t1-t0)
     term1 = (1/8)*(gmm_mu1-gmm_mu2)@inv_epsilon@(gmm_mu1-gmm_mu2).T
-    #print('Term 1:' + str(term1))
-    t2 = time.time()
-    #print(t2-t1)
-    t3 = time.time()
     num = math.sqrt(np.prod(gmm_var1[gmm_var1!=0])*np.prod(gmm_var2[gmm_var2!=0]))
     den = np.prod(epsilon_1d[epsilon_1d!=0])
     term2 = (1/2)*math.log(num/den)
-    #print('Term 2:' + str(term2))
-    #print(time.time()-t3)
     return term1+term2
 
-# # Parameters
-# distance_thresh = 100
-
-# # Read the detections of all the cameras
-# with open('tracks_seq_c010.pkl', 'rb') as f:
-#     tracks_seq = pkl.load(f)
-
-# descriptors = []
-# targets = []
-# for frame in tracks_seq:
-#     for t in frame: 
-#         descriptors.append(t.feature_vec[0]/np.max(t.feature_vec[0]))
-#         targets.append(int(t.id))
-# classes = np.unique(targets)
-# print(classes)
-# tsne = manifold.TSNE(n_components=2, n_iter=3000).fit_transform(descriptors)
-
-# # extract x and y coordinates representing the positions of the images on T-SNE plot
-# tx = tsne[:, 0]
-# ty = tsne[:, 1]
-
-# tx = scale_to_01_range(tx)
-# ty = scale_to_01_range(ty)
-
-# # initialize a matplotlib plot
-# fig = plt.figure()
-# ax = fig.add_subplot(111)
-
-# # for every class, we'll add a scatter plot separately
-# for label in classes:
-#     # find the samples of the current class in the data
-#     indices = [i for i, l in enumerate(targets) if l == label]
-
-#     # extract the coordinates of the points of this class only
-#     current_tx = np.take(tx, indices)
-#     current_ty = np.take(ty, indices)
-
-#     np.random.seed(int(label))
-#     c = list(np.random.choice(range(int(256)), size=3))
-#     color = np.array([int(c[2]), int(c[1]), int(c[0])]).reshape(1,3)
-    
-#     # add a scatter plot with the corresponding color and label
-#     ax.scatter(current_tx, current_ty, c=color/255.0, label=label)
-
-# # build a legend using the labels we set previously
-# ax.legend(loc='best')
-
-# # finally, show the plot
-# plt.show()
-
-
 # Read the detections of all the cameras
-cams =['c010','c011','c012','c013','c015']
+cams =['c010','c011','c012','c013','c014','c015']
 tracks_dict = {}
 frame_limits = {}
 for cam in cams:
@@ -203,41 +131,30 @@ for i in range(0, num_frames):
                 t.feature_vec = pca.transform(t.feature_vec)
                 tracklets[get_id(t)].update_gmm(t)
 
-# Run matching algorithm
-prob_matrix = np.zeros((len(tracklets), len(tracklets)))
+# Run matching algorithm 
 for ii, query in enumerate(tracklets.values()):
-    print(ii)
     logprobs = []
     b_distances = []
     for jj, tl in enumerate(tracklets.values()):
         if query.camera == tl.camera:
             continue
-        #lp = logprob(query.gmm_mu, query.gmm_var, tl.gmm_mu)
-        bd = bhattacharyya(query.gmm_mu, query.gmm_var, tl.gmm_mu, tl.gmm_var)
-        #logprobs.append(lp)
-        b_distances.append(bd)
-        #prob_matrix[ii,jj] = lp
-        #prob_matrix[ii,jj] = bd
-    #idx = np.argmax(logprobs)
-    idx = np.argmin(b_distances)
-    # if logprobs[idx] > 0.09:
-    #     prob_matrix[ii,idx] = 1
-    #     print('Match! tracklet ids:')
-    #     print(tl.global_id)
-    #     print(query.global_id)
-    #     tl.global_id = query.global_id
-    if b_distances[idx] < 23:
-        #prob_matrix[ii,idx] = 1
-        print('Match! tracklet ids:')
-        print(tl.global_id)
-        print(query.global_id)
+
+        lp = logprob(query.gmm_mu, query.gmm_var, tl.gmm_mu)
+        logprobs.append(lp)
+
+        #bd = bhattacharyya(query.gmm_mu, query.gmm_var, tl.gmm_mu, tl.gmm_var)
+        #b_distances.append(bd)
+
+    idx = np.argmax(logprobs)
+    print(np.max(logprobs))
+    if logprobs[idx] > 0.5:
         tl.global_id = query.global_id
     else:
         query.global_id = -1
 
-#plt.imshow(prob_matrix, cmap='gray')
-#plt.show()
-
+    # idx = np.argmin(b_distances)
+    # if b_distances[idx] < 23:
+    #     tl.global_id = query.global_id
 
 
 ## Evaluation
