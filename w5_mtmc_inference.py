@@ -54,24 +54,18 @@ def logprob(gmm_mu, gmm_var, x):
     return np.sum( np.exp(-((gmm_mu - x)**2)/(2*gmm_var)) )/len(gmm_mu)
 
 def bhattacharyya(gmm_mu1, gmm_var1, gmm_mu2, gmm_var2):
-    t0 = time.time()
     epsilon_1d = (gmm_var1+gmm_var2)/2
     epsilon = np.diag(epsilon_1d)
     if np.count_nonzero(epsilon_1d) != len(gmm_var1):
         return 10000000
     inv_epsilon = np.diag(1/epsilon_1d)
-    t1 = time.time()
-    #print(t1-t0)
     term1 = (1/8)*(gmm_mu1-gmm_mu2)@inv_epsilon@(gmm_mu1-gmm_mu2).T
     #print('Term 1:' + str(term1))
-    t2 = time.time()
-    #print(t2-t1)
-    t3 = time.time()
-    num = math.sqrt(np.prod(gmm_var1[gmm_var1!=0])*np.prod(gmm_var2[gmm_var2!=0]))
-    den = np.prod(epsilon_1d[epsilon_1d!=0])
+    num = np.prod(epsilon_1d[epsilon_1d!=0])
+    den = math.sqrt(np.prod(gmm_var1[gmm_var1!=0])*np.prod(gmm_var2[gmm_var2!=0]))
     term2 = (1/2)*math.log(num/den)
     #print('Term 2:' + str(term2))
-    #print(time.time()-t3)
+    #print(term1+term2)
     return term1+term2
 
 # # Parameters
@@ -173,7 +167,7 @@ for i in range(0, num_frames):
             embeddings_list.append(t.feature_vec)
 embeddings_vec = np.array(embeddings_list)
 embeddings_vec = np.squeeze(embeddings_vec)
-pca = PCA(n_components=20)
+pca = PCA(n_components=15)
 pca.fit(embeddings_vec)
 
 # Create the database
@@ -206,7 +200,7 @@ for i in range(0, num_frames):
 # Run matching algorithm
 prob_matrix = np.zeros((len(tracklets), len(tracklets)))
 for ii, query in enumerate(tracklets.values()):
-    print(ii)
+    #print(ii)
     logprobs = []
     b_distances = []
     for jj, tl in enumerate(tracklets.values()):
@@ -220,17 +214,15 @@ for ii, query in enumerate(tracklets.values()):
         #prob_matrix[ii,jj] = bd
     #idx = np.argmax(logprobs)
     idx = np.argmin(b_distances)
+    #print(b_distances[idx])
     # if logprobs[idx] > 0.09:
     #     prob_matrix[ii,idx] = 1
     #     print('Match! tracklet ids:')
     #     print(tl.global_id)
     #     print(query.global_id)
     #     tl.global_id = query.global_id
-    if b_distances[idx] < 23:
+    if b_distances[idx] < 18:
         #prob_matrix[ii,idx] = 1
-        print('Match! tracklet ids:')
-        print(tl.global_id)
-        print(query.global_id)
         tl.global_id = query.global_id
     else:
         query.global_id = -1
