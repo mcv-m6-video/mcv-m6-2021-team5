@@ -48,9 +48,10 @@ def bhattacharyya(gmm_mu1, gmm_var1, gmm_mu2, gmm_var2):
         return 10000000
     inv_epsilon = np.diag(1/epsilon_1d)
     term1 = (1/8)*(gmm_mu1-gmm_mu2)@inv_epsilon@(gmm_mu1-gmm_mu2).T
-    num = math.sqrt(np.prod(gmm_var1[gmm_var1!=0])*np.prod(gmm_var2[gmm_var2!=0]))
-    den = np.prod(epsilon_1d[epsilon_1d!=0])
+    num = np.prod(epsilon_1d[epsilon_1d!=0])
+    den = math.sqrt(np.prod(gmm_var1[gmm_var1!=0])*np.prod(gmm_var2[gmm_var2!=0]))
     term2 = (1/2)*math.log(num/den)
+
     return term1+term2
 
 # Read the detections of all the cameras
