@@ -37,18 +37,6 @@ def get_id(track):
 def compute_distance(x,y):
     return np.sqrt(np.sum((x-y)**2))
 
-# scale and move the coordinates so they fit [0; 1] range
-def scale_to_01_range(x):
-    # compute the distribution range
-    value_range = (np.max(x) - np.min(x))
-
-    # move the distribution so that it starts from zero
-    # by extracting the minimal value from all its values
-    starts_from_zero = x - np.min(x)
-
-    # make the distribution fit [0; 1] by dividing by its range
-    return starts_from_zero / value_range
-
 def logprob(gmm_mu, gmm_var, x):
     # TODO: This is still not the logprob... testing things jeje
     return np.sum( np.exp(-((gmm_mu - x)**2)/(2*gmm_var)) )/len(gmm_mu)
@@ -60,7 +48,6 @@ def bhattacharyya(gmm_mu1, gmm_var1, gmm_mu2, gmm_var2):
         return 1000
     inv_epsilon = np.diag(1/epsilon_1d)
     term1 = (1/8)*(gmm_mu1-gmm_mu2)@inv_epsilon@(gmm_mu1-gmm_mu2).T
-    #print('Term 1:' + str(term1))
     num = np.prod(epsilon_1d[epsilon_1d!=0])
     den = math.sqrt(np.prod(gmm_var1[gmm_var1!=0])*np.prod(gmm_var2[gmm_var2!=0]))
     term2 = (1/2)*math.log(num/den)
@@ -119,13 +106,17 @@ def bhattacharyya(gmm_mu1, gmm_var1, gmm_mu2, gmm_var2):
 # # finally, show the plot
 # plt.show()
 
+    return term1+term2
 
 # Read the detections of all the cameras
-cams =['c010','c011','c012','c013','c015']
+#distance = 'b'
+distance = 'lp'
+use_pca = False
+cams =['c010','c011','c012','c013','c014','c015']
 tracks_dict = {}
 frame_limits = {}
 for cam in cams:
-    with open('datasets/tracks/pretrained_VeRi/tracks_seq_'+cam+'.pkl', 'rb') as f:
+    with open('datasets/tracks/pretrained_VeRi_th095/tracks_seq_'+cam+'.pkl', 'rb') as f:
         tracks_dict[cam] = pkl.load(f)
         frame_limits[cam] = (int(tracks_dict[cam][0][0].frame),int(tracks_dict[cam][-1][0].frame))
 
@@ -137,8 +128,8 @@ num_frames = last_frame-init_frame
 # Load GT for each camera
 gt_dict = {}
 for cam in cams:
-    #gt_reader = AnnotationReader('datasets/aicity/AICity_data/train/S03/'+cam+'/gt/gt.txt')
-    gt_reader = AnnotationReader('datasets/aic19-track1-mtmc-train/train/S03/'+cam+'/gt/gt.txt')
+    gt_reader = AnnotationReader('datasets/aicity/AICity_data/train/S03/'+cam+'/gt/gt.txt')
+    #gt_reader = AnnotationReader('datasets/aic19-track1-mtmc-train/train/S03/'+cam+'/gt/gt.txt')
     gt = gt_reader.get_bboxes_per_frame(classes=['car'])
     start, end = list(gt.keys())[0], list(gt.keys())[-1]
     bb_gt = []
@@ -153,23 +144,24 @@ for cam in cams:
     gt_dict[cam] = bb_gt
 
 #Load all feature vectors to fit a PCA
-embeddings_list = []
-for i in range(0, num_frames):
-    frame_number = init_frame + i
-    for cam in cams:
-        if frame_number < frame_limits[cam][0] or frame_number > frame_limits[cam][1]:
-            continue
+if use_pca:
+    embeddings_list = []
+    for i in range(0, num_frames):
+        frame_number = init_frame + i
+        for cam in cams:
+            if frame_number < frame_limits[cam][0] or frame_number > frame_limits[cam][1]:
+                continue
 
-        # Get the tracks at the corresponding frame
-        cam_frame_idx = frame_number - frame_limits[cam][0]
-        tracks = tracks_dict[cam][ cam_frame_idx ]
+            # Get the tracks at the corresponding frame
+            cam_frame_idx = frame_number - frame_limits[cam][0]
+            tracks = tracks_dict[cam][ cam_frame_idx ]
 
-        for t in tracks:
-            embeddings_list.append(t.feature_vec)
-embeddings_vec = np.array(embeddings_list)
-embeddings_vec = np.squeeze(embeddings_vec)
-pca = PCA(n_components=15)
-pca.fit(embeddings_vec)
+            for t in tracks:
+                embeddings_list.append(t.feature_vec)
+    embeddings_vec = np.array(embeddings_list)
+    embeddings_vec = np.squeeze(embeddings_vec)
+    pca = PCA(n_components=20)
+    pca.fit(embeddings_vec)
 
 # Create the database
 tracklets = {}
@@ -188,50 +180,53 @@ for i in range(0, num_frames):
 
         # Update the corresponding tracklet 
         for t in tracks:
-            if get_id(t) not in tracklets.keys():
+            if use_pca:
                 t.feature_vec = pca.transform(t.feature_vec)
+            if get_id(t) not in tracklets.keys(): 
                 tl = Tracklet(get_id(t), t)
                 tracklets[get_id(t)] = tl
                 tl.global_id = global_id
                 global_id += 1
-            else:
-                t.feature_vec = pca.transform(t.feature_vec)
+            else: 
                 tracklets[get_id(t)].update_gmm(t)
 
-# Run matching algorithm
-prob_matrix = np.zeros((len(tracklets), len(tracklets)))
+
+# Run matching algorithm 
+distance_image = np.zeros((len(tracklets), len(tracklets)))
 for ii, query in enumerate(tracklets.values()):
-    #print(ii)
     logprobs = []
     b_distances = []
     for jj, tl in enumerate(tracklets.values()):
         if query.camera == tl.camera:
+            b_distances.append(math.inf)
+            logprobs.append(0)
             continue
-        #lp = logprob(query.gmm_mu, query.gmm_var, tl.gmm_mu)
-        bd = bhattacharyya(query.gmm_mu, query.gmm_var, tl.gmm_mu, tl.gmm_var)
-        #logprobs.append(lp)
-        b_distances.append(bd)
-        #prob_matrix[ii,jj] = lp
-        #prob_matrix[ii,jj] = bd
-    #idx = np.argmax(logprobs)
-    idx = np.argmin(b_distances)
-    #print(b_distances[idx])
-    # if logprobs[idx] > 0.09:
-    #     prob_matrix[ii,idx] = 1
-    #     print('Match! tracklet ids:')
-    #     print(tl.global_id)
-    #     print(query.global_id)
-    #     tl.global_id = query.global_id
-    if b_distances[idx] < 18:
-        #prob_matrix[ii,idx] = 1
-        tl.global_id = query.global_id
-    else:
-        query.global_id = -1
+        if distance == 'lp':
+            lp = logprob(query.gmm_mu, query.gmm_var, tl.gmm_mu)
+            logprobs.append(lp)
+            distance_image[ii,jj] = lp
+        elif distance == 'b':
+            bd = bhattacharyya(query.gmm_mu, query.gmm_var, tl.gmm_mu, tl.gmm_var)
+            b_distances.append(bd)
+            distance_image[ii,jj] = bd
 
-#plt.imshow(prob_matrix, cmap='gray')
-#plt.show()
+    if distance == 'lp':
+        idx = np.argmax(logprobs)
+        if logprobs[idx] > 0.09:
+            tl.global_id = query.global_id
+        else:
+            query.global_id = -1
+    elif distance == 'b':
+        idx = np.argmin(b_distances)
+        if b_distances[idx] < 23:
+            tl.global_id = query.global_id
 
-
+# print(np.max(np.max(distance_image)))
+# print(np.min(np.min(distance_image)))
+# plt.hist(np.ravel(distance_image), bins='auto')
+# plt.show()
+# plt.imshow(distance_image, cmap='gray')
+# plt.show()
 
 ## Evaluation
 acc = mm.MOTAccumulator(auto_id=True)
