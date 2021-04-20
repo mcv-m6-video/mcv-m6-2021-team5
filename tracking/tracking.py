@@ -299,7 +299,8 @@ def track_kalman(bb_det, bb_gt, max_age=2500, min_hits=2,
                                     0.229, 0.224, 0.225])
                             ])
 
-        checkpoint = torch.load('models/car_compare4.pth', map_location='cpu')
+        # checkpoint = torch.load('models/car_compare4.pth', map_location='cpu')
+        checkpoint = torch.load('models/car_re_id_model.pth', map_location='cpu')
         model.load_state_dict(checkpoint['model_state_dict'], False)
 
     for i, (frame_dets, gt_dets) in tqdm(enumerate(zip(bb_det, bb_gt))):
