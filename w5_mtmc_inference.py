@@ -396,7 +396,7 @@ for cam in cams:
     video_cap.set(1,frame_limits[cam][0])
     captures[cam] = video_cap
 
-cams = ['c010','c014']
+#cams = ['c010','c014']
 for i in tqdm(range(0, num_frames)):
     frame_number = init_frame + i
     for cam in cams:
@@ -421,7 +421,7 @@ for i in tqdm(range(0, num_frames)):
                 global_tracks.append(t)
 
         success, img = captures[cam].read()
-        if success and i%5==0:
+        if success:
             img = plot_detections2(img, global_tracks, frame_gt, show=False)
             cv2.imwrite('figures/mtmc/'+cam+'/frame_'+str(i).zfill(4)+'.jpg', img)
             # img_size = (756,512)

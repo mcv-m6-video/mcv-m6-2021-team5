@@ -66,7 +66,7 @@ class Tracklet:
         self.global_id = -1
         self.N = 1.0
         self.frames = []
-        self.last_center = t.center
+        self.last_center = np.array(t.center)
         self.movement_list = []
         self.parked = False
 
@@ -105,14 +105,15 @@ class Tracklet:
         self.gmm_M2 += delta * delta2
         self.gmm_var = self.gmm_M2/self.N
 
-        #Update movement list and check if the car is parked
-        self.movement_list(np.norm(self.last_center-t.center, ord=2))
+        #Update movement list, check if the car is parked and update last_center
+        self.movement_list.append(np.linalg.norm(self.last_center-np.array(t.center), ord=2))
         if self.N >= 10 and not self.parked:
             parked = True
-            for d in movement_list[-10:]:
-                if d>3:
+            for d in self.movement_list[-10:]:
+                if d>5:
                     parked = False
             self.parked = parked
+        self.last_center = np.array(t.center)
         
     
     def match_tracklet(self, global_id, tracklet_id):
