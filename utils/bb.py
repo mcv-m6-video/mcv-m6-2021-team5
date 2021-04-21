@@ -115,7 +115,7 @@ class Tracklet:
         self.N += 1
 
         #Normalize embedding vector
-        vec_norm = t.feature_vec[0]/np.max(t.feature_vec[0])
+        vec_norm = t.feature_vec[0]
 
         # Update the GMM mean
         # self.gmm_mu = (self.gmm_mu*(self.N-1) + vec_norm)/self.N
