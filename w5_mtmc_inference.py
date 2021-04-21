@@ -136,8 +136,8 @@ num_frames = last_frame-init_frame
 # Load GT for each camera
 gt_dict = {}
 for cam in cams:
-    #gt_reader = AnnotationReader('datasets/aicity/AICity_data/train/S03/'+cam+'/gt/gt.txt')
-    gt_reader = AnnotationReader('datasets/aic19-track1-mtmc-train/train/S03/'+cam+'/gt/gt.txt')
+    gt_reader = AnnotationReader('datasets/aicity/AICity_data/train/S03/'+cam+'/gt/gt.txt')
+    #gt_reader = AnnotationReader('datasets/aic19-track1-mtmc-train/train/S03/'+cam+'/gt/gt.txt')
     gt = gt_reader.get_bboxes_per_frame(classes=['car'])
     start, end = list(gt.keys())[0], list(gt.keys())[-1]
     bb_gt = []
@@ -385,14 +385,19 @@ for tracklet in tracklet_list:
 # plt.imshow(distance_image, cmap='gray')
 # plt.show()
 
+# Update tracklet dict
+tracklets = {}
+for tl in tracked:
+    tracklets[tl.local_id] = tl
+
 ## Evaluation
 acc = mm.MOTAccumulator(auto_id=True)
 
 #Video capture for each camera
 captures = {}
 for cam in cams:
-    #video_cap = cv2.VideoCapture('datasets/aicity/AICity_data/train/S03/'+cam+'/vdo.avi')
-    video_cap = cv2.VideoCapture('datasets/aic19-track1-mtmc-train/train/S03/'+cam+'/vdo.avi')
+    video_cap = cv2.VideoCapture('datasets/aicity/AICity_data/train/S03/'+cam+'/vdo.avi')
+    #video_cap = cv2.VideoCapture('datasets/aic19-track1-mtmc-train/train/S03/'+cam+'/vdo.avi')
     video_cap.set(1,frame_limits[cam][0])
     captures[cam] = video_cap
 
@@ -415,15 +420,17 @@ for i in tqdm(range(0, num_frames)):
         global_tracks = []
         for t in tracks:
             # Check the track and assign its corresponding global id
-            t_id = tracklets[get_id(t)].global_id
-            if t_id != -1:
-                t.id = t_id
-                global_tracks.append(t)
+            if get_id(t) in tracklets.keys():   
+                t_id = tracklets[get_id(t)].global_id
+                if t_id != -1:
+                    t.id = t_id
+                    global_tracks.append(t)
 
         success, img = captures[cam].read()
         if success:
             img = plot_detections2(img, global_tracks, frame_gt, show=False)
-            cv2.imwrite('figures/mtmc/'+cam+'/frame_'+str(i).zfill(4)+'.jpg', img)
+            #cv2.imwrite('figures/mtmc/'+cam+'/frame_'+str(i).zfill(4)+'.jpg', img)
+            cv2.imwrite('/home/eloi/storage/mtmc/'+cam+'/frame_'+str(i).zfill(4)+'.jpg', img)
             # img_size = (756,512)
             # cv2.imshow(str(i), cv2.resize(img, img_size))
             # cv2.waitKey(0)

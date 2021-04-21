@@ -1,5 +1,5 @@
 import numpy as np
-import math
+import math 
 
 class BB:
 
@@ -57,6 +57,31 @@ class BB:
         self.camera = cam
 
 
+def iou_bbox(box1, box2):
+    """
+    Input format is [xtl, ytl, xbr, ybr] per bounding box, where
+    tl and br indicate top-left and bottom-right corners of the bbox respectively
+    """
+    #determine the (x, y)-coordinates of the intersection rectangle
+    xA = max(box1[0], box2[0])
+    yA = max(box1[1], box2[1])
+    xB = min(box1[2], box2[2])
+    yB = min(box1[3], box2[3])
+
+    # compute the area of intersection rectangle
+    interArea = max(0, xB - xA + 1) * max(0, yB - yA + 1)
+
+    # compute the area of both the prediction and ground-truth
+    # rectangles
+    box1Area = (box1[2] - box1[0] + 1) * (box1[3] - box1[1] + 1)
+    box2Area = (box2[2] - box2[0] + 1) * (box2[3] - box2[1] + 1)
+
+    # compute the intersection over union 
+    iou = interArea / float(box1Area + box2Area - interArea)
+
+    # return the intersection over union value
+    return iou
+
 class Tracklet:
 
     def __init__(self, id, t):
@@ -66,7 +91,7 @@ class Tracklet:
         self.global_id = -1
         self.N = 1.0
         self.frames = []
-        self.last_center = np.array(t.center)
+        self.last_bb = t.bbox
         self.movement_list = []
         self.parked = False
 
@@ -106,15 +131,23 @@ class Tracklet:
         self.gmm_var = self.gmm_M2/self.N
 
         #Update movement list, check if the car is parked and update last_center
-        self.movement_list.append(np.linalg.norm(self.last_center-np.array(t.center), ord=2))
-        if self.N >= 10 and not self.parked:
-            parked = True
-            for d in self.movement_list[-10:]:
-                if d>5:
-                    parked = False
-            self.parked = parked
-        self.last_center = np.array(t.center)
-        
+        # self.movement_list.append(np.linalg.norm(self.last_center-np.array(t.center), ord=2))
+        # if self.N >= 10 and not self.parked:
+        #     parked = True
+        #     for d in self.movement_list[-10:]:
+        #         if d>20:
+        #             parked = False
+        #     self.parked = parked
+        # self.last_center = np.array(t.center)
+        iou = iou_bbox(self.last_bb, t.bbox)
+        print(iou)
+        if iou > 0.7:
+            self.parked = True
+        self.last_bb = t.bbox
+
+
     
     def match_tracklet(self, global_id, tracklet_id):
         print("TO DO")
+
+
