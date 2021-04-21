@@ -21,6 +21,8 @@ from multiview.networks import Net, EmbeddingNet, TripletNet
 from torchvision import transforms
 from PIL import Image
 
+import matplotlib.pyplot as plt
+
 # class TripletNet(nn.Module):
 #     def __init__(self, embedding_net):
 #         super(TripletNet, self).__init__()
@@ -354,7 +356,18 @@ def track_kalman(bb_det, bb_gt, max_age=2500, min_hits=2,
             # Change path to datasets/aic19-track1-mtmc-train +"train/S03" + seq ... when having extracted all frames per all cameras!
             if frame_dets:
                 img_path = 'datasets/aic19-track1-mtmc-train/train/S03/' + seq + '/frames/frame_' + str(frame_dets[0].frame+1).zfill(4) + '.png'
-                im = cv2.imread(img_path, cv2.IMREAD_COLOR)
+                im_orig = cv2.imread(img_path, cv2.IMREAD_COLOR)
+                im = cv2.cvtColor(im_orig, cv2.COLOR_BGR2RGB)
+
+                # cv2.imshow("holita", im_orig)
+                # cv2.waitKey(0)               
+                # cv2.imshow("holita", im_orig)
+                # cv2.waitKey(0)
+
+                # plt.imshow(im_orig)
+                # plt.show()
+                # plt.imshow(im)
+                # plt.show()
                 h, w, c = im.shape
 
                 for t in trackers:
