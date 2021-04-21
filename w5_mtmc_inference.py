@@ -136,8 +136,8 @@ num_frames = last_frame-init_frame
 # Load GT for each camera
 gt_dict = {}
 for cam in cams:
-    gt_reader = AnnotationReader('datasets/aicity/AICity_data/train/S03/'+cam+'/gt/gt.txt')
-    #gt_reader = AnnotationReader('datasets/aic19-track1-mtmc-train/train/S03/'+cam+'/gt/gt.txt')
+    #gt_reader = AnnotationReader('datasets/aicity/AICity_data/train/S03/'+cam+'/gt/gt.txt')
+    gt_reader = AnnotationReader('datasets/aic19-track1-mtmc-train/train/S03/'+cam+'/gt/gt.txt')
     gt = gt_reader.get_bboxes_per_frame(classes=['car'])
     start, end = list(gt.keys())[0], list(gt.keys())[-1]
     bb_gt = []
