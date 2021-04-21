@@ -94,21 +94,34 @@ transform = transforms.Compose([
 					        0.229, 0.224, 0.225])
 					   ])
 
-checkpoint = torch.load('../models/car_compare4.pth', map_location='cpu')
+# checkpoint = torch.load('../models/car_compare4.pth', map_location='cpu')
+checkpoint = torch.load('../models/car_re_id_model_v1.pth', map_location='cpu') 
 model.load_state_dict(checkpoint['model_state_dict'], False)
 
 
-img1 = cv2.imread('../datasets/cars/S03/0245_c010_732.jpg')
-img1 = cv2.cvtColor(img1,cv2.COLOR_BGR2RGB)
+# img1_orig = cv2.imread('../datasets/cars/S03/0245_c010_732.jpg')
+
+img1_orig = cv2.imread('../datasets/cars/S03/0243_c012_662.jpg')
+img1 = cv2.cvtColor(img1_orig,cv2.COLOR_BGR2RGB)
 img1 = Image.fromarray(img1)
 
-img2 = cv2.imread('../datasets/cars/S03/0245_c011_765.jpg') 
-img2 = cv2.cvtColor(img2,cv2.COLOR_BGR2RGB)
+# img2_orig = cv2.imread('../datasets/cars/S03/0245_c011_765.jpg') 
+img2_orig = cv2.imread('../datasets/cars/S03/0243_c010_552.jpg') 
+img2 = cv2.cvtColor(img2_orig,cv2.COLOR_BGR2RGB)
 img2 = Image.fromarray(img2)
 
-img3 = cv2.imread('../datasets/cars/S03/0245_c014_449.jpg')
-img3 = cv2.cvtColor(img3,cv2.COLOR_BGR2RGB)
+# img3_orig = cv2.imread('../datasets/cars/S03/0245_c014_449.jpg')
+img3_orig = cv2.imread('../datasets/cars/S03/0244_c012_704.jpg')
+img3 = cv2.cvtColor(img3_orig,cv2.COLOR_BGR2RGB)
 img3 = Image.fromarray(img3)
+
+new_image = np.concatenate((cv2.resize(img1_orig, (224, 224), interpolation = cv2.INTER_AREA),
+                            cv2.resize(img2_orig, (224, 224), interpolation = cv2.INTER_AREA),
+                            cv2.resize(img3_orig, (224, 224), interpolation = cv2.INTER_AREA)))
+
+cv2.imwrite("triplet_2.png", new_image)
+# cv2.imshow("hola", new_image)
+# cv2.waitKey(0)
 
 img1 = transform(img1)
 img2 = transform(img2)
@@ -125,6 +138,7 @@ print(f'positive distance : {distance_positive}')
 distance_negative = torch.norm(anchor - negative, 2, dim=1)
 #distance_negative = (anchor - negative).pow(2).sum(1)
 print(f'negative distance : {distance_negative}')
+
 
 # positive = positive.div(positive.norm(p=2,dim=1,keepdim=True))
 # anchor = anchor.div(anchor.norm(p=2,dim=1,keepdim=True))
