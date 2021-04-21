@@ -97,7 +97,6 @@ class Tracklet:
         self.parked = False
 
         # Normalize the features
-        #vec_norm = t.feature_vec[0]/np.max(t.feature_vec[0])
         vec_norm = t.feature_vec[0]
 
         # Tracklet model
@@ -113,16 +112,7 @@ class Tracklet:
         # Update the frames
         self.frames.append(t.frame)
         self.N += 1
-
-        #Normalize embedding vector
         vec_norm = t.feature_vec[0]
-
-        # Update the GMM mean
-        # self.gmm_mu = (self.gmm_mu*(self.N-1) + vec_norm)/self.N
-
-        # Update the GMM variance (TODO: Online method)
-        # self.feature_vecs.append(vec_norm)
-        # self.gmm_std = np.var(self.feature_vecs, axis=0, ddof=1)
 
         #Update mean, variance and M2 with Welford's algorithm
         delta = vec_norm - self.gmm_mu
@@ -133,25 +123,38 @@ class Tracklet:
 
         #Update movement list, check if the car is parked and update last_center
         self.movement_list.append(np.linalg.norm(np.array(self.last_center)-np.array(t.center), ord=2))
-        # if self.N >= 10 and not self.parked:
-        #     parked = True
-        #     for d in self.movement_list[-10:]:
-        #         if d>1.5:
-        #             parked = False
-        #     self.parked = parked
-            # if self.local_id == 'c12id75':
-            #     print(self.movement_list[-10:])
-            #     print(self.parked)
         self.last_center = t.center
-        # iou = iou_bbox(self.last_bb, t.bbox)
-        # print(iou)
-        # if iou > 0.9:
-        #     self.parked = True
-        # self.last_bb = t.bbox
 
 
-    
-    def match_tracklet(self, global_id, tracklet_id):
-        print("TO DO")
 
 
+# Tracklet utilities
+# Function to assign a unique id to each tracklet
+def get_id(track):
+    return "c" + str(track.camera) + "id" + str(int(track.id))
+
+def get_f_ini(track):
+    return track.frames[0]
+
+def compute_distance(x,y):
+    return np.sqrt(np.sum((x-y)**2))
+
+def squared_distance(gmm_mu1, gmm_mu2):
+    return np.linalg.norm(gmm_mu1-gmm_mu2, ord=2)
+
+def logprob(gmm_mu, gmm_var, x):
+    return np.sum( np.exp(-((gmm_mu - x)**2)/(2*gmm_var)) )/len(gmm_mu)
+
+def bhattacharyya(gmm_mu1, gmm_var1, gmm_mu2, gmm_var2):
+    epsilon_1d = (gmm_var1+gmm_var2)/2
+    epsilon = np.diag(epsilon_1d)
+    if np.count_nonzero(epsilon_1d) != len(gmm_var1):
+        return 1000
+    inv_epsilon = np.diag(1/epsilon_1d)
+    term1 = (1/8)*(gmm_mu1-gmm_mu2)@inv_epsilon@(gmm_mu1-gmm_mu2).T
+    num = np.prod(epsilon_1d[epsilon_1d!=0])
+    den = math.sqrt(np.prod(gmm_var1[gmm_var1!=0])*np.prod(gmm_var2[gmm_var2!=0]))
+    term2 = (1/2)*math.log(num/den)
+    term2 = max(term2, 0.0)
+
+    return term1+term2

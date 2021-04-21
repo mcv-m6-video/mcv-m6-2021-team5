@@ -43,9 +43,9 @@ def plot_detections2(img, detection_list, gt_list=None, show=True):
         np.random.seed(int(det.id))
         c = list(np.random.choice(range(int(256)), size=3)) 
         color = (int(c[0]), int(c[1]), int(c[2]))
-        cv2.rectangle(img, (int(det.xtl), int(det.ytl)), (int(det.xbr), int(det.ybr)), color, 3) 
+        cv2.rectangle(img, (int(det.xtl), int(det.ytl+7)), (int(det.xbr), int(det.ybr)), color, 7) 
         cv2.putText(img,str(int(det.id)), (int(det.xtl), int(det.ytl)), 
-                    cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2)
+                    cv2.FONT_HERSHEY_SIMPLEX, 2, color, 7)
     
     if gt_list is not None:
         for det in gt_list:

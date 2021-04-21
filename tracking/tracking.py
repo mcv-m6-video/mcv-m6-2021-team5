@@ -23,15 +23,6 @@ from PIL import Image
 
 import matplotlib.pyplot as plt
 
-# class TripletNet(nn.Module):
-#     def __init__(self, embedding_net):
-#         super(TripletNet, self).__init__()
-#         self.embedding_net = embedding_net
-
-#     def forward(self, x1):
-#         output1 = self.embedding_net(x1)
-#         return output1
-
 def remove_missed_targets(targets, max_misses=2):
     cleaned_targets = []
     for target in targets:
@@ -112,12 +103,6 @@ def track_max_overlap(bb_det, bb_gt, score_threshold=0.8):
                     track_id += 1
                     new_targets.append(detection)
 
-                    # unique=True
-                    # for nt in new_targets:
-                    #     if t.track_id == nt.track_id:
-                    #     unique=False
-                    # if(unique):
-                    #     new_targets.append(t)
 
                 else:
                     # Already existing target, update box, keep id
@@ -126,12 +111,7 @@ def track_max_overlap(bb_det, bb_gt, score_threshold=0.8):
                     t.update_bbox(detection)
                     new_targets.append(t)
 
-                # unique=True
-                # for nt in new_targets:
-                #     if t.track_id == nt.track_id:
-                #     unique=False
-                # if(unique):
-                #     new_targets.append(t)
+
 
         #Draw the image and also put the id
         # for t in new_targets:
@@ -359,15 +339,6 @@ def track_kalman(bb_det, bb_gt, max_age=2500, min_hits=2,
                 im_orig = cv2.imread(img_path, cv2.IMREAD_COLOR)
                 im = cv2.cvtColor(im_orig, cv2.COLOR_BGR2RGB)
 
-                # cv2.imshow("holita", im_orig)
-                # cv2.waitKey(0)               
-                # cv2.imshow("holita", im_orig)
-                # cv2.waitKey(0)
-
-                # plt.imshow(im_orig)
-                # plt.show()
-                # plt.imshow(im)
-                # plt.show()
                 h, w, c = im.shape
 
                 for t in trackers:

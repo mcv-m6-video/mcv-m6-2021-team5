@@ -64,6 +64,18 @@ The following colab link (for anyone with access from upc.edu google suite) show
 https://colab.research.google.com/drive/14kBMx_GR0B_pm1ZwxAhcpNCVSRmmUQF2?usp=sharing
 
 
+## Week 5
+The goals of the final week are:
+ - Evaluate Multi Target Single Camera Tracking options (MTSC)
+ - Implement Multi Target Multi Camera Tracking (MTMC)
+
+- **Task1:** MTSC. The implemented trackers are based on maximum overlap and/or Kalman filter approaches. The base detections used are provided by the AICity Challenge dataset and comprise 3 different SOTA models: SSD512, YoloV3 and Mask-RCNN. The best IDF1 score is obtained by the Kalman Filter + Mask-RCNN detections. These trackers are implemented in `w5_tracking_eval.py`
+- **Task2:** MTMC. Our implementation uses pre-computed single camera tracks and descriptors to create a global MTMC tracker. The base SC tracker is the Kalman Filter-based approach mentioned above, and the object descriptors are provided by a self-trained Triplet network, using the VeRi dataset along with the AICity Challenge data. The reidentification is performed using these descriptors along with hand-crafted temporal constraints.
+The final executable lies in `w5_mtmc_inference.py`, while the feature/track extraction is handled by `w5_extract_features_and_tracks.py`
+
+The corresponding slides can be found in this link: https://docs.google.com/presentation/d/1gLYbMHwS8-cQMAhrnA7B1nehF_ka07eeIN5SxFuZ5NU/edit?usp=sharing
+
+
 ## Installation :wrench:
 ### Frames generation from vdo.avi
 In order to preview the different detections in the frames, vdo.avi should be downloaded in `datasets/aicity/AICity_data/train/S03/c010` and splitted in frames using ffmpeg:
