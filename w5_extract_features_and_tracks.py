@@ -13,8 +13,8 @@ from utils.bb import BB
 import random
 import time
 
-# seqs=['c010', 'c011', 'c012', 'c013', 'c014', 'c015']
-seqs=['c014']
+seqs=['c010', 'c011', 'c012', 'c013', 'c014', 'c015']
+# seqs=['c014']
 #seqs=['c011']
 detector='mask_rcnn' 
 method='kalman'
@@ -22,7 +22,7 @@ dataset = "datasets/aic19-track1-mtmc-train"
 #dataset = "datasets/aicity/AICity_data"
 tracks_dict = {}
 
-dir_tracks = "ourmodel_th095"
+dir_tracks = "ourmodel_th085"
 
 start = time.time()
 print(start)
