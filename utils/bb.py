@@ -92,6 +92,7 @@ class Tracklet:
         self.N = 1.0
         self.frames = []
         self.last_bb = t.bbox
+        self.last_center = t.center
         self.movement_list = []
         self.parked = False
 
@@ -131,19 +132,22 @@ class Tracklet:
         self.gmm_var = self.gmm_M2/self.N
 
         #Update movement list, check if the car is parked and update last_center
-        # self.movement_list.append(np.linalg.norm(self.last_center-np.array(t.center), ord=2))
+        self.movement_list.append(np.linalg.norm(np.array(self.last_center)-np.array(t.center), ord=2))
         # if self.N >= 10 and not self.parked:
         #     parked = True
         #     for d in self.movement_list[-10:]:
-        #         if d>20:
+        #         if d>1.5:
         #             parked = False
         #     self.parked = parked
-        # self.last_center = np.array(t.center)
-        iou = iou_bbox(self.last_bb, t.bbox)
-        print(iou)
-        if iou > 0.7:
-            self.parked = True
-        self.last_bb = t.bbox
+            # if self.local_id == 'c12id75':
+            #     print(self.movement_list[-10:])
+            #     print(self.parked)
+        self.last_center = t.center
+        # iou = iou_bbox(self.last_bb, t.bbox)
+        # print(iou)
+        # if iou > 0.9:
+        #     self.parked = True
+        # self.last_bb = t.bbox
 
 
     

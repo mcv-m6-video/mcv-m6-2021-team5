@@ -113,6 +113,7 @@ def bhattacharyya(gmm_mu1, gmm_var1, gmm_mu2, gmm_var2):
 # plt.show()
 
 # Read the detections of all the cameras
+write_images = True
 #distance = 'b'
 #distance = 'lp'
 distance = 'sd'
@@ -124,7 +125,7 @@ th_b = 23
 tracks_dict = {}
 frame_limits = {}
 for cam in cams:
-    with open('datasets/tracks/ourmodel_th095/tracks_seq_'+cam+'.pkl', 'rb') as f:
+    with open('datasets/tracks/ourmodel_th085/tracks_seq_'+cam+'_085.pkl', 'rb') as f:
         tracks_dict[cam] = pkl.load(f)
         frame_limits[cam] = (int(tracks_dict[cam][0][0].frame),int(tracks_dict[cam][-1][0].frame))
 
@@ -201,14 +202,18 @@ for i in range(0, num_frames):
 
 distance_image = np.zeros((len(tracklets), len(tracklets)))
 tracklet_list = list(tracklets.values())
-tracklet_list.sort(key=get_f_ini)
 num_tracklets = len(tracklet_list)
 
-#Filter out tracklets
-for i,tracklet in enumerate(tracklet_list):
-    if tracklet.parked == True:
-        tracklet_list.pop(i)
+
+#Filter out parked cars from the tracklets
+filtered_tracklets=[]
+for tracklet in tracklet_list:
+    if np.median(tracklet.movement_list) > 2.75:
+        filtered_tracklets.append(tracklet)
+tracklet_list = filtered_tracklets
+
 print('Removed ' +str(num_tracklets-len(tracklet_list))+ ' tracklets.')
+tracklet_list.sort(key=get_f_ini)
 num_tracklets = len(tracklet_list)
 
 # Run matching algorithm 
@@ -385,6 +390,16 @@ for tracklet in tracklet_list:
 # plt.imshow(distance_image, cmap='gray')
 # plt.show()
 
+
+# Print movement vectors
+# for tl in untracked:
+#     if tl.parked == True:
+#         print(tl.movement_list)
+# for tl in tracked:
+#     print('Global id: ' + str(tl.global_id))
+#     print('Local id: ' + str(tl.local_id))
+#     print(tl.movement_list)
+
 # Update tracklet dict
 tracklets = {}
 for tl in tracked:
@@ -394,12 +409,13 @@ for tl in tracked:
 acc = mm.MOTAccumulator(auto_id=True)
 
 #Video capture for each camera
-captures = {}
-for cam in cams:
-    video_cap = cv2.VideoCapture('datasets/aicity/AICity_data/train/S03/'+cam+'/vdo.avi')
-    #video_cap = cv2.VideoCapture('datasets/aic19-track1-mtmc-train/train/S03/'+cam+'/vdo.avi')
-    video_cap.set(1,frame_limits[cam][0])
-    captures[cam] = video_cap
+if write_images:
+    captures = {}
+    for cam in cams:
+        #video_cap = cv2.VideoCapture('datasets/aicity/AICity_data/train/S03/'+cam+'/vdo.avi')
+        video_cap = cv2.VideoCapture('datasets/aic19-track1-mtmc-train/train/S03/'+cam+'/vdo.avi')
+        video_cap.set(1,frame_limits[cam][0])
+        captures[cam] = video_cap
 
 #cams = ['c010','c014']
 for i in tqdm(range(0, num_frames)):
@@ -425,15 +441,15 @@ for i in tqdm(range(0, num_frames)):
                 if t_id != -1:
                     t.id = t_id
                     global_tracks.append(t)
-
-        success, img = captures[cam].read()
-        if success:
-            img = plot_detections2(img, global_tracks, frame_gt, show=False)
-            #cv2.imwrite('figures/mtmc/'+cam+'/frame_'+str(i).zfill(4)+'.jpg', img)
-            cv2.imwrite('/home/eloi/storage/mtmc/'+cam+'/frame_'+str(i).zfill(4)+'.jpg', img)
-            # img_size = (756,512)
-            # cv2.imshow(str(i), cv2.resize(img, img_size))
-            # cv2.waitKey(0)
+        if write_images:
+            success, img = captures[cam].read()
+            if success:
+                img = plot_detections2(img, global_tracks, frame_gt, show=False)
+                cv2.imwrite('figures/mtmc/'+cam+'/frame_'+str(i).zfill(4)+'.jpg', img)
+                #cv2.imwrite('/home/eloi/storage/mtmc/'+cam+'/frame_'+str(i).zfill(4)+'.jpg', img)
+                # img_size = (756,512)
+                # cv2.imshow(str(i), cv2.resize(img, img_size))
+                # cv2.waitKey(0)
 
         #Evaluation: Compute distaces and create id arrays
         gt_ids = [gt.id for gt in frame_gt]
