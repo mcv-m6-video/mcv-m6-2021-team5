@@ -22,7 +22,7 @@ dataset = "datasets/aic19-track1-mtmc-train"
 #dataset = "datasets/aicity/AICity_data"
 tracks_dict = {}
 
-dir_tracks = "ourmodel_th085"
+dir_tracks = "ourmodel_th085_rgb"
 
 start = time.time()
 print(start)
