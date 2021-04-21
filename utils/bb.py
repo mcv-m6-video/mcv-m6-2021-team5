@@ -67,7 +67,8 @@ class Tracklet:
         self.frames = []
 
         # Normalize the features
-        vec_norm = t.feature_vec[0]/np.max(t.feature_vec[0])
+        #vec_norm = t.feature_vec[0]/np.max(t.feature_vec[0])
+        vec_norm = t.feature_vec[0]
 
         # Tracklet model
         self.feature_vecs = []

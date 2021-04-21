@@ -41,7 +41,7 @@ def compute_distance(x,y):
     return np.sqrt(np.sum((x-y)**2))
 
 def squared_distance(gmm_mu1, gmm_mu2):
-    return torch.norm(gmm_mu1-gmm_mu2, 2)
+    return np.linalg.norm(gmm_mu1-gmm_mu2, ord=2)
 
 def logprob(gmm_mu, gmm_var, x):
     # TODO: This is still not the logprob... testing things jeje
@@ -114,10 +114,12 @@ def bhattacharyya(gmm_mu1, gmm_var1, gmm_mu2, gmm_var2):
 
 # Read the detections of all the cameras
 #distance = 'b'
-distance = 'lp'
+#distance = 'lp'
+distance = 'sd'
 use_pca = False
 cams =['c010','c011','c012','c013','c014','c015']
 th_lp = 0.5
+th_sd = 3.1
 th_b = 23
 tracks_dict = {}
 frame_limits = {}
@@ -214,6 +216,7 @@ for tracklet in tracklet_list:
 
     logprobs = []
     b_distances = []
+    s_distances = []
     for un in untracked:
         #Compute smallest distance with untracked tracklets
         if distance == 'lp':
@@ -229,6 +232,13 @@ for tracklet in tracklet_list:
             else:
                 bd = bhattacharyya(tracklet.gmm_mu, tracklet.gmm_var, un.gmm_mu, un.gmm_var)
                 b_distances.append(bd)
+        
+        elif distance == 'sd':
+            if tracklet.camera == un.camera:
+                s_distances.append(10000)
+            else:
+                sd = squared_distance(tracklet.gmm_mu, un.gmm_mu)
+                s_distances.append(sd)
 
     #Keep smallest distance and index
     if distance == 'lp' and logprobs:
@@ -240,9 +250,15 @@ for tracklet in tracklet_list:
         idx = np.argmin(b_distances)
         if b_distances[idx] < th_b:
             idx_untracked, min_untracked = idx, b_distances[idx]
-    
+
+    elif distance == 'sd' and s_distances:
+        idx = np.argmin(s_distances)
+        if s_distances[idx] < th_sd:
+            idx_untracked, min_untracked = idx, s_distances[idx]
+
     logprobs = []
     b_distances = []
+    s_distances = []
     for tr in tracked:
         #Compute smallest distance with already tracked tracklets
         if distance == 'lp':
@@ -257,6 +273,12 @@ for tracklet in tracklet_list:
             else:
                 bd = bhattacharyya(tracklet.gmm_mu, tracklet.gmm_var, tr.gmm_mu, tr.gmm_var)
                 b_distances.append(bd)
+        elif distance == 'sd':
+            if tracklet.camera == un.camera:
+                s_distances.append(10000)
+            else:
+                sd = squared_distance(tracklet.gmm_mu, un.gmm_mu)
+                s_distances.append(sd)
 
     #Keep smallest distance
     if distance == 'lp' and logprobs:
@@ -268,6 +290,11 @@ for tracklet in tracklet_list:
         idx = np.argmin(b_distances)
         if b_distances[idx] < th_b:
             idx_tracked, min_tracked = idx, b_distances[idx]
+    
+    elif distance == 'sd' and s_distances:
+        idx = np.argmin(s_distances)
+        if s_distances[idx] < th_sd:
+            idx_tracked, min_tracked = idx, s_distances[idx]
 
     #No match with either untracked or tracked
     if idx_untracked == -1 and idx_tracked == -1:
@@ -294,7 +321,7 @@ for tracklet in tracklet_list:
 
     #Match with both an untracked and a tracked tracklet. Keep the best case
     if idx_untracked != -1 and idx_tracked != -1:
-        if distance == 'lp' and min_tracked>min_untracked or distance == 'b' and min_tracked<min_untracked:
+        if distance == 'lp' and min_tracked>min_untracked or distance == 'b' and min_tracked<min_untracked or distance == 'sd' and min_tracked<min_untracked:
             tracklet.global_id = tracked[idx_tracked].global_id
             tracked.append(tracklet)
             
@@ -353,7 +380,7 @@ for tracklet in tracklet_list:
 ## Evaluation
 acc = mm.MOTAccumulator(auto_id=True)
 
-# Video capture for each camera
+#Video capture for each camera
 captures = {}
 for cam in cams:
     #video_cap = cv2.VideoCapture('datasets/aicity/AICity_data/train/S03/'+cam+'/vdo.avi')
@@ -361,7 +388,7 @@ for cam in cams:
     video_cap.set(1,frame_limits[cam][0])
     captures[cam] = video_cap
 
-# At each frame, get all the detections and assign the global id corresponding to their tracklet
+cams = ['c010','c014']
 for i in tqdm(range(0, num_frames)):
     frame_number = init_frame + i
     for cam in cams:
@@ -386,9 +413,12 @@ for i in tqdm(range(0, num_frames)):
                 global_tracks.append(t)
 
         success, img = captures[cam].read()
-        if success:
+        if success and i%5==0:
             img = plot_detections2(img, global_tracks, frame_gt, show=False)
             cv2.imwrite('figures/mtmc/'+cam+'/frame_'+str(i).zfill(4)+'.jpg', img)
+            # img_size = (756,512)
+            # cv2.imshow(str(i), cv2.resize(img, img_size))
+            # cv2.waitKey(0)
 
         #Evaluation: Compute distaces and create id arrays
         gt_ids = [gt.id for gt in frame_gt]
