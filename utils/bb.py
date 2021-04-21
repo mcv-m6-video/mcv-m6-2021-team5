@@ -15,6 +15,7 @@ class BB:
         self.missed = 0
         self.feature_vec = []
         self.camera = 0
+        self.parked = False
 
     @property
     def bbox(self):
@@ -65,6 +66,9 @@ class Tracklet:
         self.global_id = -1
         self.N = 1.0
         self.frames = []
+        self.last_center = t.center
+        self.movement_list = []
+        self.parked = False
 
         # Normalize the features
         #vec_norm = t.feature_vec[0]/np.max(t.feature_vec[0])
@@ -101,6 +105,14 @@ class Tracklet:
         self.gmm_M2 += delta * delta2
         self.gmm_var = self.gmm_M2/self.N
 
+        #Update movement list and check if the car is parked
+        self.movement_list(np.norm(self.last_center-t.center, ord=2))
+        if self.N >= 10 and not self.parked:
+            parked = True
+            for d in movement_list[-10:]:
+                if d>3:
+                    parked = False
+            self.parked = parked
         
     
     def match_tracklet(self, global_id, tracklet_id):

@@ -60,10 +60,13 @@ for seq in seqs:
 
     #Track detected objects and compare to GT
     tic = time.time()
-    tracks_dict[seq] = track_kalman(bb_det, bb_gt, max_age=2000, min_hits=4, iou_threshold=0.1, score_threshold=0.95, seq=seq, extract_descriptors=True, start_frame=start)
+    #tracks_dict[seq] = track_kalman(bb_det, bb_gt, max_age=2000, min_hits=4, iou_threshold=0.1, score_threshold=0.95, seq=seq, extract_descriptors=True, start_frame=start)
+    tracks_dict[seq] = track_kalman(bb_det, bb_gt, max_age=10, min_hits=4, iou_threshold=0.1, score_threshold=0.85, seq=seq, extract_descriptors=True, start_frame=start)
+    #tracks_dict[seq] = track_kalman(bb_det, bb_gt, max_age=10, min_hits=4, iou_threshold=0.1, score_threshold=0.75, seq=seq, extract_descriptors=True, start_frame=start)
+
     toc = time.time()
     print('Seq: '+seq+'| Tracking took: ' + str(toc-tic))
-    with open('datasets/tracks/' + dir_tracks +  '/tracks_seq_'+seq+'.pkl','wb') as f:
+    with open('datasets/tracks/' + dir_tracks +  '/tracks_seq_'+seq+'_085.pkl','wb') as f:
         pkl.dump(tracks_dict[seq], f)
     final = time.time()
     print("Time elapsed: " + str(final- start))

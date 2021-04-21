@@ -199,11 +199,19 @@ for i in range(0, num_frames):
                 tracklets[get_id(t)].update_gmm(t)
 
 
-# Run matching algorithm 
 distance_image = np.zeros((len(tracklets), len(tracklets)))
 tracklet_list = list(tracklets.values())
 tracklet_list.sort(key=get_f_ini)
+num_tracklets = len(tracklet_list)
 
+#Filter out tracklets
+for i,tracklet in enumerate(tracklet_list):
+    if tracklet.parked == True:
+        tracklet_list.pop(i)
+print('Removed ' +str(num_tracklets-len(tracklet_list))+ ' tracklets.')
+num_tracklets = len(tracklet_list)
+
+# Run matching algorithm 
 untracked = []
 tracked = []
 id_cnt = 0
