@@ -329,5 +329,5 @@ for i in tqdm(range(0, num_frames)):
         cv2.imwrite('/figures/mtmc/frame_'+str(i).zfill(4)+'.jpg', output_img)
 
 mh = mm.metrics.create()
-summary = mh.compute(acc, metrics=['num_frames', 'mota', 'motp', 'idf1', 'idp', 'idr'], name='acc')
+summary = mh.compute(acc, metrics=['num_frames', 'mota', 'motp', 'idf1', 'idp', 'idr', 'precision', 'recall'], name='acc')
 print(summary)
