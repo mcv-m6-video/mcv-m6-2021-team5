@@ -23,7 +23,9 @@ import math
 import motmetrics as mm
 from sklearn.decomposition import PCA
 
-# Parameters
+# Good threshold values for different models
+# th_sd_veri = 1.3
+# th_sd_ours = 4.62
 
 write_images = False             # Write inference images to disk
 #distance = 'b'                  # Use Bhattacharaya distance
@@ -126,7 +128,7 @@ for tracklet in tracklet_list:
     if np.median(tracklet.movement_list) > 2.75:
         filtered_tracklets.append(tracklet)
 tracklet_list = filtered_tracklets
- 
+
 tracklet_list.sort(key=get_f_ini)
 num_tracklets = len(tracklet_list)
 
