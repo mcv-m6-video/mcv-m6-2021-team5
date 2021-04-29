@@ -75,6 +75,7 @@ The final executable lies in `w5_mtmc_inference.py`, while the feature/track ext
 
 The corresponding slides can be found in this link: https://docs.google.com/presentation/d/1dizwKkVsknNyP30W8dLmjLUUo-DPq5GojOaxcaJJaVw/edit?usp=sharing
 
+Report: [link to PDF](Single-Camera_and_Multi-Camera_Vehicle_Tracking_for_Road_Traffic_Monitoring.pdf)
 
 ## Installation :wrench:
 ### Frames generation from vdo.avi
